@@ -3,3 +3,5 @@ Contains files, notebooks and source raw data used to develop and train the mode
 
 
 --- Uploading clear refactored code and source files in progress ---
+
+Authored by [Konstantin Zamansky](https://orcid.org/0009-0005-6495-1985)
