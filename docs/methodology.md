@@ -1,0 +1,1 @@
+Explains dedrifting and validation strategies
