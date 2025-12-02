@@ -4,7 +4,7 @@ Contains files, notebooks and source raw data used to develop and train the mode
 
 # 🌡️ SWCNT Gas Sensor Pattern Recognition via Thermocycling
 
-[![Python](https://img.shields.io/badge/Python-3.11-blue.svg)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.13-blue.svg)](https://www.python.org/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![MLflow](https://img.shields.io/badge/MLflow-Tracking-orange)](https://mlflow.org/)
 [![Optuna](https://img.shields.io/badge/Optuna-Optimization-purple)](https://optuna.org/)
