@@ -1,6 +1,10 @@
 # A gas sensor based on free-standing SWCNT film for selective recognition of toxic and flammable gases under thermal cycling protocols
 Contains files, notebooks and source raw data used to develop and train the models described in the article [10.1016/j.snb.2024.136116](https://linkinghub.elsevier.com/retrieve/pii/S0925400524008463)
 
+---
+**Repository filling in progress**
+---
+
 
 # 🌡️ SWCNT Gas Sensor Pattern Recognition via Thermocycling
 
@@ -38,9 +42,9 @@ Single-walled carbon nanotube (SWCNT) gas sensors generate noisy time-series dat
 
 | Model | Task | Metric | Performance |
 |-------|------|--------|------------|
-| CatBoost | Gas Classification | F1 Score (macro) | **0.97** |
-| CatBoost | Concentration Regression | RMSE (ppm) | **1.8** |
-| LSTM | Multi-output Regression | RMSE (ppm) | **2.1** |
+| CatBoost | Gas Classification | F1 Score (macro) | **0.91** |
+| CatBoost | Concentration Regression | RMSE (ppm) | **4.2** |
+| LSTM | Multi-output Regression | RMSE (ppm) | **3.6** |
 
 *Validated via time-series cross-validation (8-fold split by measurement cycle)*
 
