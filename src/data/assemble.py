@@ -1,8 +1,11 @@
 import numpy as np
 import pandas as pd
+from typing import Callable, Any, List
+
 from .loading import load_gas_data
 from .cleaning import apply_manual_trim
 from .paths import PROCESSED_FILE_MAP
+from preprocessing.smoothing import dedrift
 
 DP_PER_PULSE = 402  # from experimental protocol (see the article)
 MAX_FLOW = 50  # max flow through MFC, sccm (see the article)
@@ -58,7 +61,7 @@ def build_basic_dataset(gas: str, gas_raw: bool = False) -> pd.DataFrame:
     DF[gas] = gas_col
     return DF
     
-def full_dataset(gas_raw: bool = False) -> pd.DataFrame:
+def full_dataset(dedrifting_func: Callable[..., Any], envelope_ind: int | List[int] , gas_raw: bool = False, **kwargs) -> pd.DataFrame:
     """
     Args:
         gas_raw: bool
@@ -69,5 +72,6 @@ def full_dataset(gas_raw: bool = False) -> pd.DataFrame:
     DF = pd.DataFrame()
     for gas in ["NO2", "H2S", "Acet"]:
         gas_df = build_basic_dataset(gas, gas_raw)
-        DF = pd.concat([DF, gas_df])
+        dedrifted = dedrift(df = gas_df, envelope_ind=envelope_ind, dedrift_func= dedrifting_func, **kwargs)
+        DF = pd.concat([DF, dedrifted])
     return DF
