@@ -1,5 +1,6 @@
 | Column            | Description                                                                                                            |
 |-------------------|------------------------------------------------------------------------------------------------------------------------|
+| *file_extension*  | .parquet (`compression = 'brotli'`)                                                                                    |
 | Index             | Datetime index                                                                                                         |
 | V                 | Voltage applied to the sample with Keithley 2601B (V)                                                                  |
 | I                 | Current through the sample measured by Keithley 2601B (A)                                                              |
