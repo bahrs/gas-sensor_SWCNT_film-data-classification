@@ -39,6 +39,7 @@ def build_basic_dataset(gas: str, gas_raw: bool = False) -> pd.DataFrame:
           
     if "I" not in df_clean.columns:
         raise KeyError("Expected column 'I' with current values in dataframe.")
+    if gas == 'NO2_2': gas = 'NO2'
 
     pulses = pd.DataFrame(cut_into_pulses(df_clean["I"].values))
     meas_cycle_col = df_clean["meas_cycle"].values[::DP_PER_PULSE]
@@ -55,7 +56,9 @@ def build_basic_dataset(gas: str, gas_raw: bool = False) -> pd.DataFrame:
         NO2 = [0] * len(meas_cycle_col),
         H2S = [0] * len(meas_cycle_col),
         Acet = [0] * len(meas_cycle_col),
-        meas_cycle = meas_cycle_col               
+        meas_cycle = meas_cycle_col,
+        gas_ = gas,
+        class_ = ['air' if conc == 0 else gas for conc in gas_col]             
     )
     if gas == 'NO2_2': gas = "NO2"  # a workaround to include NO2 recorded later
     DF[gas] = gas_col
@@ -73,5 +76,5 @@ def full_dataset(dedrifting_func: Callable[..., Any], envelope_ind: int | List[i
     for gas in ["NO2", "H2S", "Acet"]:
         gas_df = build_basic_dataset(gas, gas_raw)
         dedrifted = dedrift(df = gas_df, envelope_ind=envelope_ind, dedrift_func= dedrifting_func, **kwargs)
-        DF = pd.concat([DF, dedrifted])
+        DF = pd.concat([DF, dedrifted], ignore_index=True)
     return DF
