@@ -76,6 +76,8 @@ def train_test_TS_class(df_: pd.DataFrame, n_components: int = 5, start: int = 1
             test_y.append(df_.loc[df_['meas_cycle']==split+1].loc[:,"class_"].values)
         return train_X, test_X, train_y, test_y
 
+# Claude draft
+
 @dataclass
 class CVFold:
     """Single cross-validation fold."""
