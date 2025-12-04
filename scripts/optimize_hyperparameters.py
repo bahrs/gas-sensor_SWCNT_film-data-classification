@@ -1,5 +1,91 @@
+"""
+optimize_hyperparameters.py
+
+Run hyperparameter optimization with Optuna + MLflow.
+"""
+
+import argparse
+import pandas as pd
+import mlflow
+from pathlib import Path
+
+from src.models.optuna_objectives import run_lstm_optimization, run_catboost_optimization
+from src.data.preprocessing import load_processed_data
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Hyperparameter optimization')
+    parser.add_argument('--model', choices=['lstm', 'catboost'], required=True)
+    parser.add_argument('--data-path', type=str, default='data/processed/full_dataset.parquet')
+    parser.add_argument('--n-trials', type=int, default=100)
+    parser.add_argument('--timeout', type=int, default=7200)  # 2 hours
+    parser.add_argument('--mlflow-uri', type=str, default='mlruns/')
+    
+    args = parser.parse_args()
+    
+    # Set MLflow tracking URI
+    mlflow.set_tracking_uri(args.mlflow_uri)
+    
+    # Load data
+    print(f"Loading data from {args.data_path}...")
+    df = pd.read_parquet(args.data_path)
+    print(f"Loaded {len(df)} samples")
+    
+    # Run optimization
+    if args.model == 'lstm':
+        print("Running LSTM optimization...")
+        study = run_lstm_optimization(
+            df,
+            n_trials=args.n_trials,
+            timeout=args.timeout
+        )
+        
+        print("\n" + "="*60)
+        print("LSTM Optimization Complete!")
+        print("="*60)
+        print(f"Best RMSE: {study.best_value:.4f}")
+        print("\nBest Parameters:")
+        for param, value in study.best_params.items():
+            print(f"  {param}: {value}")
+    
+    else:  # catboost
+        print("Running CatBoost optimization...")
+        study = run_catboost_optimization(
+            df,
+            n_trials=args.n_trials,
+            timeout=args.timeout
+        )
+        
+        print("\n" + "="*60)
+        print("CatBoost Optimization Complete!")
+        print("="*60)
+        print(f"Best F1-Macro: {study.best_value:.4f}")
+        print("\nBest Parameters:")
+        for param, value in study.best_params.items():
+            print(f"  {param}: {value}")
+    
+    # Save study
+    study_path = f"studies/{args.model}_study.pkl"
+    Path("studies").mkdir(exist_ok=True)
+    import pickle
+    with open(study_path, 'wb') as f:
+        pickle.dump(study, f)
+    print(f"\n✅ Study saved to {study_path}")
+    
+    # Launch MLflow UI instructions
+    print("\n" + "="*60)
+    print("View results in MLflow UI:")
+    print(f"  mlflow ui --backend-store-uri {args.mlflow_uri}")
+    print("  Then open: http://localhost:5000")
+    print("="*60)
+
+
+if __name__ == '__main__':
+    main()
+
+
 ###
-### SUPER RAW DRAFT VERSION
+### SUPER RAW OLD DRAFT VERSION
 ###
 
 
