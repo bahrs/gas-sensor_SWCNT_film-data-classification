@@ -41,7 +41,8 @@ def build_basic_dataset(gas: str, gas_raw: bool = False) -> pd.DataFrame:
         raise KeyError("Expected column 'I' with current values in dataframe.")
     if gas == 'NO2_2': gas = 'NO2'
 
-    pulses = pd.DataFrame(cut_into_pulses(df_clean["I"].values))
+    pulses = pd.DataFrame(data = cut_into_pulses(df_clean["I"].values), 
+                          index = df_clean.index[::DP_PER_PULSE])
     meas_cycle_col = df_clean["meas_cycle"].values[::DP_PER_PULSE]
     gas_col = df_clean["MFC_target"].values[::DP_PER_PULSE]
     if gas_raw:
@@ -51,7 +52,6 @@ def build_basic_dataset(gas: str, gas_raw: bool = False) -> pd.DataFrame:
         # ]
         # gas_col = np.array(actual).reshape(len(actual) // DP_PER_PULSE, DP_PER_PULSE).mean(axis = 1)
         pass
-    pulses.index = df_clean.index[::DP_PER_PULSE]
     DF = pulses.assign(
         NO2 = [0] * len(meas_cycle_col),
         H2S = [0] * len(meas_cycle_col),
@@ -76,5 +76,5 @@ def full_dataset(dedrifting_func: Callable[..., Any], envelope_ind: int | List[i
     for gas in ["NO2", "H2S", "Acet"]:
         gas_df = build_basic_dataset(gas, gas_raw)
         dedrifted = dedrift(df = gas_df, envelope_ind=envelope_ind, dedrift_func= dedrifting_func, **kwargs)
-        DF = pd.concat([DF, dedrifted], ignore_index=True)
+        DF = pd.concat([DF, dedrifted])
     return DF

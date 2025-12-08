@@ -1,12 +1,14 @@
 import numpy as np
-import pandas as pd # might be redundant
+import pandas as pd
 
 from dataclasses import dataclass
-from typing import Iterator, Optional
-import tensorflow as tf
+from typing import Optional, Dict, List, Tuple, Iterator
 
+import tensorflow as tf
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.decomposition import PCA
+import joblib
+
 
 """TODO: 
     1. disable sample weighting (this is excessive!)
@@ -14,32 +16,214 @@ from sklearn.decomposition import PCA
     3. REMAKE create_RNN_sequences_for_multiple_gases
     4. REMAKE train_test_TS_class in a OOP way
     """
+def scale_n_PCA(
+    train: np.ndarray,
+    test: np.ndarray,
+    n_components: Optional[int] = None,
+    scale: bool = True,
+    scaler: Optional[MinMaxScaler] = None,
+    do_PCA: bool = True,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Scale (optional) and apply PCA (optional) to train/test features.
 
-def scale_n_PCA(train: np.array, test: np.array, n_components: int, scale: bool= True, scaler = MinMaxScaler(), do_PCA: bool = True):
-    if do_PCA:
-        pca = PCA(n_components=n_components)
-        train_pca = pca.fit_transform(train)
-        test_pca = pca.transform(test)
-        return train_pca, test_pca
+    - Fits scaler and PCA on train only.
+    - Applies the same transforms to test.
+    - Always returns transformed train, test.
+    """
+    X_train = train.copy()
+    X_test = test.copy()
+
+    # 1) Scaling
     if scale:
-        scaler = MinMaxScaler() if scaler==None else scaler
-        train = scaler.fit_transform(train)
-        test = scaler.transform(test)
+        if scaler is None:
+            scaler = MinMaxScaler()
+        scaler.fit(X_train)
+        X_train = scaler.transform(X_train)
+        X_test = scaler.transform(X_test)
 
-    else:
-        return train, test
+    # 2) PCA
+    if do_PCA:
+        if n_components is None:
+            raise ValueError("n_components must be specified when do_PCA=True")
+
+        pca = PCA(n_components=n_components)
+        pca.fit(X_train)
+        X_train = pca.transform(X_train)
+        X_test = pca.transform(X_test)
+
+    return X_train, X_test
+
     
-def create_RNN_sequences(data: np.ndarray, look_back: int = 50):
+def create_RNN_sequences(data: np.ndarray, look_back: int = 50) -> Tuple[np.ndarray, int]:
+    """
+    Build sliding-window sequences for RNN/LSTM.
+
+    Args:
+        data: (num_samples, num_features)
+        look_back: window length.
+
+    Returns:
+        sequences: (num_sequences, look_back, num_features)
+        effective_look_back: possibly reduced look_back if data is too short.
+    """
     num_samples, num_features = data.shape
-    if num_samples//4*3 < look_back:
-        look_back = int(num_samples//4*3)
-        print(f"Look back too large, number of samples is {num_samples}. Lookback is set to {look_back}")
+
+    # Adjust look_back if it's too large
+    if num_samples // 4 * 3 < look_back:
+        look_back = int(num_samples // 4 * 3)
+        print(
+            f"Look back too large, num_samples={num_samples}. "
+            f"Lookback set to {look_back}"
+        )
+
     num_sequences = num_samples - look_back + 1
-    #print(num_sequences, look_back, num_features)
     sequences = np.zeros((num_sequences, look_back, num_features))
+
     for i in range(look_back):
-        sequences[:, i] = data[i:num_samples - look_back + 1 + i]
-    return list(sequences), look_back
+        sequences[:, i] = data[i : num_samples - look_back + 1 + i]
+
+    return sequences, look_back
+
+def build_sequences_for_df(
+    df_sub: pd.DataFrame,
+    feature_cols: int = 402,
+    target_cols: List[str] = ['NO2', 'H2S', 'Acet'],
+    look_back: int = 50,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Build RNN sequences for a dataframe subset that already has 'gas_'.
+
+    For each gas_, build sliding windows independently in time order.
+
+    Args:
+        df_sub: subset with columns feature_cols + target_cols + 'gas_' + 'class_'.
+        target_cols: target column names (e.g. ['NO2', 'H2S', 'Acet'] for regression or ['class_'] for classification).
+        look_back: window length.
+
+    Returns:
+        X_seq: (N_seq_total, look_back, n_features)
+        y_seq: (N_seq_total, n_targets)
+    """
+    big_X, big_y = [], []
+
+    for gas in df_sub["gas_"].unique():
+        df_gas = df_sub.loc[df_sub["gas_"] == gas].sort_values(["meas_cycle", "Time"])
+
+        X_gas = df_gas.iloc[:,:feature_cols].to_numpy()
+        y_gas = df_gas.loc[target_cols].to_numpy()
+
+        if len(X_gas) <= 1:
+            continue  # not enough data
+
+        seq_X, eff_lb = create_RNN_sequences(X_gas, look_back=look_back)
+        # align targets: one per sequence, at last time step of each window
+        seq_y = y_gas[eff_lb - 1 :, :]
+
+        if seq_X.shape[0] != seq_y.shape[0]:
+            raise RuntimeError(
+                f"Sequence/target size mismatch for gas={gas}: "
+                f"{seq_X.shape[0]} vs {seq_y.shape[0]}"
+            )
+
+        big_X.append(seq_X)
+        big_y.append(seq_y)
+
+    if not big_X:
+        raise ValueError("No sequences could be built from the given subset.")
+
+    X_seq = np.vstack(big_X)
+    y_seq = np.vstack(big_y)
+
+    return X_seq, y_seq
+
+@dataclass
+class CVFold:
+    """Single cross-validation fold."""
+    train_X: np.ndarray
+    train_y: np.ndarray
+    test_X: np.ndarray
+    test_y: np.ndarray
+    train_sample_weights: Optional[np.ndarray] = None
+    test_sample_weights: Optional[np.ndarray] = None
+    fold_index: int = 0
+    metadata: Optional[Dict] = None
+
+
+class TimeSeriesCVSplitter:
+    """
+    Container for time-series CV folds.
+
+    Supports iteration, indexing, TensorFlow datasets, and save/load.
+    """
+
+    def __init__(self, folds: List[CVFold]):
+        self.folds = folds
+
+    def __len__(self) -> int:
+        return len(self.folds)
+
+    def __getitem__(self, idx: int) -> CVFold:
+        return self.folds[idx]
+
+    def __iter__(self) -> Iterator[CVFold]:
+        return iter(self.folds)
+
+    def summary(self) -> str:
+        lines = [f"TimeSeriesCVSplitter: {len(self.folds)} folds\n"]
+        for fold in self.folds:
+            lines.append(
+                f"  Fold {fold.fold_index}: "
+                f"train={fold.train_X.shape[0]}, "
+                f"test={fold.test_X.shape[0]}, "
+                f"features={fold.train_X.shape[1:]}"
+            )
+        return "\n".join(lines)
+
+    def to_tf_datasets(
+        self, batch_size: int = 32
+    ) -> List[Tuple[tf.data.Dataset, tf.data.Dataset]]:
+        """
+        Convert all folds to TensorFlow datasets.
+
+        If sample weights are None, yields (X, y).
+        If not None, yields (X, y, sample_weight).
+        """
+        datasets = []
+        for fold in self.folds:
+            if fold.train_sample_weights is None:
+                train_ds = tf.data.Dataset.from_tensor_slices(
+                    (fold.train_X, fold.train_y)
+                )
+            else:
+                train_ds = tf.data.Dataset.from_tensor_slices(
+                    (fold.train_X, fold.train_y, fold.train_sample_weights)
+                )
+
+            if fold.test_sample_weights is None:
+                test_ds = tf.data.Dataset.from_tensor_slices(
+                    (fold.test_X, fold.test_y)
+                )
+            else:
+                test_ds = tf.data.Dataset.from_tensor_slices(
+                    (fold.test_X, fold.test_y, fold.test_sample_weights)
+                )
+
+            train_ds = train_ds.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+            test_ds = test_ds.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+
+            datasets.append((train_ds, test_ds))
+
+        return datasets
+
+    def save(self, path: str, compress: int = 3):
+        joblib.dump(self.folds, path, compress=compress)
+
+    @classmethod
+    def load(cls, path: str) -> "TimeSeriesCVSplitter":
+        folds = joblib.load(path)
+        return cls(folds)
+
 
 # think about the ways to optimize this process
 ### IMPORTANT ###
