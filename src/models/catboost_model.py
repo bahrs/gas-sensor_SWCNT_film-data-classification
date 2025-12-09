@@ -1,9 +1,3 @@
-"""
-catboost_model.py
-
-CatBoost model wrapper for classification and regression.
-"""
-
 import numpy as np
 from catboost import CatBoostClassifier, CatBoostRegressor
 from sklearn.metrics import (
@@ -11,6 +5,12 @@ from sklearn.metrics import (
     mean_squared_error, mean_absolute_error
 )
 from typing import Dict, Any, Literal, Optional
+
+"""
+catboost_model.py
+
+CatBoost model wrapper for classification and regression.
+"""
 
 
 def build_catboost_classifier(

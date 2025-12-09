@@ -1,9 +1,3 @@
-"""
-optuna_objectives.py
-
-Optuna objective functions with MLflow integration for hyperparameter optimization.
-"""
-
 import optuna
 from optuna.integration.mlflow import MLflowCallback
 import mlflow
@@ -17,6 +11,13 @@ from src.models.catboost_model import (
 )
 from src.data.preprocessing import load_processed_data
 from src.data.train_test_split import create_cv_splits_for_lstm, create_cv_splits_for_catboost
+
+"""
+optuna_objectives.py
+
+Optuna objective functions with MLflow integration for hyperparameter optimization.
+"""
+
 
 
 class LSTMObjective:

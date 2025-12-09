@@ -1,11 +1,3 @@
-# Claude draft
-
-"""
-lstm_model.py
-
-LSTM model creation and training functions for time-series regression.
-"""
-
 import numpy as np
 import tensorflow as tf
 from tf.keras.models import Sequential  # pyright: ignore[reportMissingImports]
@@ -14,6 +6,15 @@ from tf.keras.optimizers import Adam  # pyright: ignore[reportMissingImports]
 from tf.keras.callbacks import EarlyStopping, ReduceLROnPlateau  # pyright: ignore[reportMissingImports]
 from sklearn.metrics import mean_squared_error
 from typing import Optional, Dict, Any
+
+# Claude draft
+
+"""
+lstm_model.py
+
+LSTM model creation and training functions for time-series regression.
+"""
+
 
 
 def build_lstm(

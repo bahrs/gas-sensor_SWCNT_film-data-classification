@@ -1,3 +1,13 @@
+import numpy as np
+import pandas as pd
+from dataclasses import dataclass, field
+from typing import Iterator, Literal, Optional
+import pickle
+import warnings
+
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.decomposition import PCA
+
 """
 train_test_split.py
 
@@ -10,16 +20,6 @@ Key features:
 - Optional PCA dimensionality reduction
 - Serialization support (pickle/joblib)
 """
-
-import numpy as np
-import pandas as pd
-from dataclasses import dataclass, field
-from typing import Iterator, Literal, Optional
-import pickle
-import warnings
-
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.decomposition import PCA
 
 # Optional: Only import TensorFlow if needed
 try:

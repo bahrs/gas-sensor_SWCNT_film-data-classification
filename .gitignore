@@ -2,6 +2,8 @@
 .venv/
 mlruns/
 
+Launch MLflow.bat  # launcher for MLflow from the YD working dir
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

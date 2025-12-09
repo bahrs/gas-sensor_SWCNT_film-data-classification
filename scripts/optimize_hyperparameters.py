@@ -1,9 +1,3 @@
-"""
-optimize_hyperparameters.py
-
-Run hyperparameter optimization with Optuna + MLflow.
-"""
-
 import argparse
 import pandas as pd
 import mlflow
@@ -11,6 +5,13 @@ from pathlib import Path
 
 from src.models.optuna_objectives import run_lstm_optimization, run_catboost_optimization
 from src.data.preprocessing import load_processed_data
+
+"""
+optimize_hyperparameters.py
+
+Run hyperparameter optimization with Optuna + MLflow.
+"""
+
 
 
 def main():
