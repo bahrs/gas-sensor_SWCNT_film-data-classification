@@ -11,8 +11,8 @@ import numpy as np
 from typing import Dict, Any, Optional
 import logging
 
-from src.models.lstm_model import build_lstm, train_lstm
-from src.models.catboost_model import (
+from models.lstm_model import build_lstm, train_lstm
+from models.catboost_model import (
     build_catboost_classifier, train_catboost_classifier,
     build_catboost_regressor, train_catboost_regressor
 )

@@ -19,7 +19,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from data.assemble import full_dataset
 from preprocessing.smoothing import Exp_pd, Savitzky_Golay
-from src.models.optuna_objectives import (
+from models.optuna_objectives import (
     run_lstm_regressor_optimization,
     run_lstm_classifier_optimization,
     run_catboost_classifier_optimization,
