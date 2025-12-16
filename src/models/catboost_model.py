@@ -1,17 +1,21 @@
+"""
+catboost_model.py
+
+CatBoost model wrapper for classification and regression tasks.
+"""
+
 import numpy as np
 from catboost import CatBoostClassifier, CatBoostRegressor
 from sklearn.metrics import (
     f1_score, accuracy_score, classification_report,
     mean_squared_error, mean_absolute_error
 )
-from typing import Dict, Any, Literal, Optional
+from typing import Dict, Any
 
-"""
-catboost_model.py
 
-CatBoost model wrapper for classification and regression.
-"""
-
+# ============================================================================
+# CLASSIFICATION
+# ============================================================================
 
 def build_catboost_classifier(
     iterations: int = 1000,
@@ -66,6 +70,15 @@ def train_catboost_classifier(
     """
     Train CatBoost classifier with early stopping.
     
+    Args:
+        model: CatBoost classifier instance
+        X_train: Training features
+        y_train: Training labels
+        X_val: Validation features
+        y_val: Validation labels
+        early_stopping_rounds: Early stopping rounds
+        verbose: Print training progress
+    
     Returns:
         Dictionary with training metrics
     """
@@ -98,6 +111,10 @@ def train_catboost_classifier(
     return metrics
 
 
+# ============================================================================
+# REGRESSION
+# ============================================================================
+
 def build_catboost_regressor(
     iterations: int = 1000,
     depth: int = 6,
@@ -107,7 +124,21 @@ def build_catboost_regressor(
     verbose: bool = False,
     **kwargs
 ) -> CatBoostRegressor:
-    """Build CatBoost regressor."""
+    """
+    Build CatBoost regressor.
+    
+    Args:
+        iterations: Number of boosting iterations
+        depth: Tree depth
+        learning_rate: Learning rate
+        l2_leaf_reg: L2 regularization
+        loss_function: Loss function (use 'MultiRMSE' for multi-target)
+        verbose: Print training progress
+        **kwargs: Additional CatBoost parameters
+    
+    Returns:
+        CatBoost regressor instance
+    """
     model = CatBoostRegressor(
         iterations=iterations,
         depth=depth,
@@ -131,7 +162,21 @@ def train_catboost_regressor(
     early_stopping_rounds: int = 50,
     verbose: bool = False
 ) -> Dict[str, Any]:
-    """Train CatBoost regressor."""
+    """
+    Train CatBoost regressor with early stopping.
+    
+    Args:
+        model: CatBoost regressor instance
+        X_train: Training features
+        y_train: Training targets
+        X_val: Validation features
+        y_val: Validation targets
+        early_stopping_rounds: Early stopping rounds
+        verbose: Print training progress
+    
+    Returns:
+        Dictionary with training metrics
+    """
     model.fit(
         X_train, y_train,
         eval_set=(X_val, y_val),
@@ -144,11 +189,22 @@ def train_catboost_regressor(
     y_pred = model.predict(X_val)
     
     # Overall metrics
-    rmse_overall = mean_squared_error(y_val, y_pred, squared=False, multioutput='uniform_average')
-    mae_overall = mean_absolute_error(y_val, y_pred, multioutput='uniform_average')
+    rmse_overall = mean_squared_error(
+        y_val, y_pred, 
+        squared=False, 
+        multioutput='uniform_average'
+    )
+    mae_overall = mean_absolute_error(
+        y_val, y_pred, 
+        multioutput='uniform_average'
+    )
     
     # Per-output metrics
-    rmse_per_output = mean_squared_error(y_val, y_pred, squared=False, multioutput='raw_values')
+    rmse_per_output = mean_squared_error(
+        y_val, y_pred, 
+        squared=False, 
+        multioutput='raw_values'
+    )
     
     metrics = {
         'best_iteration': best_iteration,

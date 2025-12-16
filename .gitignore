@@ -4,6 +4,10 @@ mlruns/
 
 Launch MLflow.bat  # launcher for MLflow from the YD working dir
 
+# Draft versions
+
+scripts/draft_*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

@@ -1,0 +1,47 @@
+# Configuration for CatBoost Regression Optimization
+
+experiment:
+  name: "SWCNT_CatBoost_Regression"
+  study_name: "catboost_regression_v1"
+  task: "regression"
+  model_type: "catboost"
+
+data:
+  feature_cols: 402
+  target_cols: ["NO2", "H2S", "Acet"]
+  dedrift_method: "Exp_pd"
+  dedrift_params:
+    alpha: 0.0217
+    envelope_ind: [201]
+
+preprocessing:
+  cv_start_cycle: 7
+  cv_test_size: 1
+  n_components_range: [50, 200]
+
+model:
+  iterations_range: [500, 2000]
+  iterations_step: 100
+  depth_range: [4, 8]
+  learning_rate_range: [0.01, 0.3]
+  l2_leaf_reg_range: [1.0, 20.0]
+  loss_function: "MultiRMSE"  # Multi-target RMSE
+  early_stopping_rounds: 50
+
+optimization:
+  n_trials: 100
+  timeout: null
+  direction: "minimize"  # minimize RMSE
+  pruner:
+    type: "MedianPruner"
+    n_startup_trials: 10
+    n_warmup_steps: 2
+    interval_steps: 1
+
+mlflow:
+  tracking_uri: "mlruns"
+  artifact_location: null
+  log_models: true
+  log_plots: true
+
+random_seed: 42

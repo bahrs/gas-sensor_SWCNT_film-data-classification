@@ -1,0 +1,49 @@
+# Configuration for LSTM Regression Optimization
+
+experiment:
+  name: "SWCNT_LSTM_Regression"
+  study_name: "lstm_regression_v1"
+  task: "regression"
+  model_type: "lstm"
+
+data:
+  feature_cols: 402
+  target_cols: ["NO2", "H2S", "Acet"]
+  dedrift_method: "Exp_pd"
+  dedrift_params:
+    alpha: 0.0217
+    envelope_ind: [201]
+
+preprocessing:
+  cv_start_cycle: 7
+  cv_test_size: 1
+  look_back_range: [20, 60]
+  n_components_range: [50, 150]
+
+model:
+  n_layers_range: [1, 3]
+  n_units_range: [32, 128]
+  n_units_step: 16
+  dropout_range: [0.1, 0.5]
+  learning_rate_range: [1.0e-4, 1.0e-2]
+  batch_size_options: [32, 64, 128, 256]
+  epochs: 150
+  patience: 30
+
+optimization:
+  n_trials: 100
+  timeout: null  # seconds, null = no timeout
+  direction: "minimize"  # minimize RMSE
+  pruner:
+    type: "MedianPruner"
+    n_startup_trials: 10
+    n_warmup_steps: 2
+    interval_steps: 1
+
+mlflow:
+  tracking_uri: "mlruns"
+  artifact_location: null
+  log_models: true
+  log_plots: true
+
+random_seed: 42
