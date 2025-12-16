@@ -84,6 +84,7 @@ opentelemetry-semantic-conventions==0.60b0
 opt_einsum==3.4.0
 optree==0.18.0
 optuna==4.6.0
+optuna-integration==4.6.0
 orjson==3.11.5
 packaging==25.0
 pandas==2.3.3

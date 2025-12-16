@@ -14,7 +14,7 @@ import mlflow
 from pathlib import Path
 
 # Add src to path
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[1]  # PROJECT_ROOT = Path(__file__).resolve().parents[0]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from data.assemble import full_dataset

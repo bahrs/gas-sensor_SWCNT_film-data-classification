@@ -251,12 +251,12 @@ class TimeSeriesCVSplitter:
 
     def save(self, path: str, compress: int = 3):
         """Save folds to disk using joblib."""
-        joblib.dump(self.folds, path, compress=compress)
+        joblib.dump(self.folds, f"{path}.joblib", compress=compress)
 
     @classmethod
     def load(cls, path: str) -> "TimeSeriesCVSplitter":
         """Load folds from disk."""
-        folds = joblib.load(path)
+        folds = joblib.load(f"{path}.joblib")
         return cls(folds)
 
 

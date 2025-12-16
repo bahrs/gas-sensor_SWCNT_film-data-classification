@@ -11,19 +11,20 @@ import sys
 from pathlib import Path
 
 # Add src to path
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
+PROJECT_ROOT = Path.cwd().parents[0]
+sys.path.append(str(PROJECT_ROOT))
 
 def test_imports():
     """Test that all modules can be imported."""
     print("Testing imports...")
     
     try:
+        import tensorflow as tf
         from src.data.loading import load_gas_data
         from src.data.cleaning import apply_manual_trim
         from src.data.assemble import build_basic_dataset, full_dataset
         from src.preprocessing.smoothing import Exp_pd, Savitzky_Golay, dedrift
-        from src.data.train_test import create_time_series_folds
+        from src.preprocessing.train_test import create_time_series_folds
         from src.models.catboost_model import build_catboost_classifier, build_catboost_regressor
         from src.models.lstm_model import build_lstm
         from src.models.optuna_objectives import (
@@ -72,7 +73,7 @@ def test_cv_splitting():
     try:
         from src.data.assemble import full_dataset
         from src.preprocessing.smoothing import Exp_pd
-        from src.data.train_test import create_time_series_folds
+        from src.preprocessing.train_test import create_time_series_folds
         
         df = full_dataset(
             dedrifting_func=Exp_pd,
