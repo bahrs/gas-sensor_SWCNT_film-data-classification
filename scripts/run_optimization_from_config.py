@@ -17,9 +17,9 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]  # PROJECT_ROOT = Path(__file__).resolve().parents[0]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from data.assemble import full_dataset
-from preprocessing.smoothing import Exp_pd, Savitzky_Golay
-from models.optuna_objectives import (
+from data.assemble import full_dataset  # pyright: ignore[reportMissingImports]
+from preprocessing.smoothing import Exp_pd, Savitzky_Golay  # pyright: ignore[reportMissingImports]
+from models.optuna_objectives import (  # pyright: ignore[reportMissingImports]
     run_lstm_regressor_optimization,
     run_lstm_classifier_optimization,
     run_catboost_classifier_optimization,
