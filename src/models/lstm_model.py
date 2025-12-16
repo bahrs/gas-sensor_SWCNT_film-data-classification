@@ -6,10 +6,10 @@ LSTM model creation and training functions for time-series regression.
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense, Dropout
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
+from tensorflow.keras.models import Sequential  # pyright: ignore[reportMissingImports]
+from tensorflow.keras.layers import LSTM, Dense, Dropout  # pyright: ignore[reportMissingImports]
+from tensorflow.keras.optimizers import Adam  # pyright: ignore[reportMissingImports]
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau  # pyright: ignore[reportMissingImports]
 from sklearn.metrics import mean_squared_error
 from typing import Optional, Dict, Any
 
