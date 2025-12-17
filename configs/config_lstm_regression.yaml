@@ -22,13 +22,13 @@ preprocessing:
 
 model:
   n_layers_range: [1, 2]
-  n_units_range: [16, 64]
+  n_units_range: [16, 32]
   n_units_step: 16
   dropout_range: [0.1, 0.5]
   learning_rate_range: [1.0e-4, 1.0e-2]
   batch_size_options: [32, 64, 128, 256]
-  epochs: 150
-  patience: 30
+  epochs: 100
+  patience: 15
 
 optimization:
   n_trials: 10

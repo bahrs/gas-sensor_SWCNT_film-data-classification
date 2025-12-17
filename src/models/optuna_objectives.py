@@ -477,12 +477,10 @@ def run_optimization(
     mlflow_experiment_name: str,
     n_trials: int = 100,
     timeout: Optional[int] = None,
-    direction: str = 'minimize',
-    objective_kwargs: Optional[Dict] = None
-) -> optuna.Study:
+    direction: str = "minimize",
+    objective_kwargs: Optional[Dict] = None,
+    ) -> optuna.Study:
     """
-    Generic optimization runner with MLflow integration.
-    
     Args:
         objective_class: Objective class (e.g., LSTMRegressorObjective)
         df: Preprocessed dataframe
@@ -495,10 +493,18 @@ def run_optimization(
     
     Returns:
         Completed Optuna study
+
+    Fixes MLflow "run already active" by using:
+      - one parent run for the study
+      - nested runs per trial via Optuna MLflowCallback
     """
     # Set MLflow experiment
     mlflow.set_experiment(mlflow_experiment_name)
-    
+
+    # Defensive: close any previously active run (can happen after crashes)
+    while mlflow.active_run() is not None:
+        mlflow.end_run()
+
     # Create Optuna study
     study = optuna.create_study(
         study_name=study_name,
@@ -506,39 +512,55 @@ def run_optimization(
         pruner=optuna.pruners.MedianPruner(
             n_startup_trials=10,
             n_warmup_steps=2,
-            interval_steps=1
-        )
+            interval_steps=1,
+        ),
     )
-    
-    # Create MLflow callback
-    mlflc = MLflowCallback(
-        tracking_uri=mlflow.get_tracking_uri(),
-        metric_name='value'
-    )
-    
+
     # Create objective
     objective_kwargs = objective_kwargs or {}
     objective = objective_class(df, **objective_kwargs)
-    
-    # Run optimization
+
     logger.info(f"Starting optimization: {study_name}")
-    study.optimize(
-        objective,
-        n_trials=n_trials,
-        timeout=timeout,
-        callbacks=[mlflc],
-        show_progress_bar=True,
-        n_jobs=1  # Don't parallelize (MLflow logging issues)
-    )
-    
-    # Log best parameters to MLflow
-    with mlflow.start_run(run_name=f'best_{study_name}'):
-        mlflow.log_params(study.best_params)
-        mlflow.log_metrics({
-            'best_value': study.best_value,
-            'n_trials': len(study.trials)
-        })
-    
+
+    # Parent run for the whole study; trials will be nested runs
+    with mlflow.start_run(run_name=f"study_{study_name}") as parent_run:
+        # Create MLflow callback (nested trial runs)
+        mlflc = MLflowCallback(
+            tracking_uri=mlflow.get_tracking_uri(),
+            metric_name="value",
+            mlflow_kwargs={"nested": True},
+        )
+
+        # Run optimization
+        study.optimize(
+            objective,
+            n_trials=n_trials,
+            timeout=timeout,
+            callbacks=[mlflc],
+            show_progress_bar=True,
+            n_jobs=1,  # Don't parallelize (MLflow logging issues)
+        )
+
+        # Log best params/summary to the parent run
+        mlflow.log_params({f"best__{k}": v for k, v in study.best_params.items()})
+        mlflow.log_metrics(
+            {
+                "best_value": float(study.best_value),
+                "n_trials": len(study.trials),
+            }
+        )
+
+        # Link to best trial run if Optuna callback saved it
+        try:
+            best_trial = study.best_trial
+            run_id = best_trial.system_attrs.get("mlflow_run_id") or best_trial.system_attrs.get(
+                "run_id"
+            )
+            if run_id:
+                mlflow.set_tag("best_trial_run_id", run_id)
+        except Exception:
+            pass
+
     logger.info(f"Optimization complete. Best value: {study.best_value}")
     return study
 
