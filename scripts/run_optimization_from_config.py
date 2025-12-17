@@ -2,6 +2,7 @@
 run_optimization_from_config.py
 
 Run Optuna hyperparameter optimization from YAML config files.
+Now supports SQLite storage and pruning configuration.
 
 Usage:
     python scripts/run_optimization_from_config.py configs/lstm_regression.yaml
@@ -14,7 +15,7 @@ import mlflow
 from pathlib import Path
 
 # Add src to path
-PROJECT_ROOT = Path(__file__).resolve().parents[1]  # PROJECT_ROOT = Path(__file__).resolve().parents[0]
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from data.assemble import full_dataset  # pyright: ignore[reportMissingImports]
@@ -66,11 +67,12 @@ def run_optimization(config: dict, df):
     """Run optimization based on config."""
     exp_cfg = config['experiment']
     opt_cfg = config['optimization']
-    mlflow_cfg = config['mlflow']
     preproc_cfg = config['preprocessing']
+    storage_cfg = config.get('storage', {})
     
-    # Set MLflow tracking URI
-    mlflow.set_tracking_uri(mlflow_cfg['tracking_uri'])
+    # Get storage paths
+    optuna_storage = storage_cfg.get('optuna', 'sqlite:///optuna_studies.db')
+    mlflow_storage = storage_cfg.get('mlflow', 'sqlite:///mlflow.db')
     
     # Prepare objective kwargs
     objective_kwargs = {
@@ -95,6 +97,14 @@ def run_optimization(config: dict, df):
         if exp_cfg['task'] == 'regression':
             objective_kwargs['target_cols'] = config['data']['target_cols']
     
+    # Get pruner config
+    pruner_cfg = opt_cfg.get('pruner', {})
+    pruner_config = {
+        'n_startup_trials': pruner_cfg.get('n_startup_trials', 5),
+        'n_warmup_steps': pruner_cfg.get('n_warmup_steps', 1),
+        'interval_steps': pruner_cfg.get('interval_steps', 1)
+    }
+    
     # Select optimization function
     if exp_cfg['model_type'] == 'lstm' and exp_cfg['task'] == 'regression':
         optimize_func = run_lstm_regressor_optimization
@@ -114,20 +124,35 @@ def run_optimization(config: dict, df):
     print(f"   Study: {exp_cfg['study_name']}")
     print(f"   Trials: {opt_cfg['n_trials']}")
     print(f"   Direction: {opt_cfg['direction']}")
+    print(f"   Optuna storage: {optuna_storage}")
+    print(f"   MLflow storage: {mlflow_storage}")
+    print(f"   Pruner: {pruner_cfg.get('type', 'MedianPruner')}")
+    print(f"     - startup_trials: {pruner_config['n_startup_trials']}")
+    print(f"     - warmup_steps: {pruner_config['n_warmup_steps']}")
     
     study = optimize_func(
         df,
         study_name=exp_cfg['study_name'],
         mlflow_experiment_name=exp_cfg['name'],
         n_trials=opt_cfg['n_trials'],
-        timeout=opt_cfg['timeout'],
+        timeout=opt_cfg.get('timeout'),
         direction=opt_cfg['direction'],
-        objective_kwargs=objective_kwargs
+        objective_kwargs=objective_kwargs,
+        storage=optuna_storage,
+        pruner_config=pruner_config
     )
     
     print(f"\n✓ Optimization complete!")
     print(f"  Best value: {study.best_value:.6f}")
     print(f"  Best params: {study.best_params}")
+    
+    # Print pruning statistics
+    n_complete = len([t for t in study.trials if t.state.name == 'COMPLETE'])
+    n_pruned = len([t for t in study.trials if t.state.name == 'PRUNED'])
+    print(f"\n📊 Trial Statistics:")
+    print(f"  Complete: {n_complete}")
+    print(f"  Pruned: {n_pruned}")
+    print(f"  Pruning rate: {n_pruned / len(study.trials):.1%}")
     
     return study
 
@@ -155,6 +180,7 @@ def main():
     study = run_optimization(config, df)
     
     print(f"\n✅ Done! MLflow experiment: {config['experiment']['name']}")
+    print(f"   View results: mlflow ui")
 
 
 if __name__ == '__main__':
