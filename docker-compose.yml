@@ -1,0 +1,30 @@
+services:
+  mlflow:
+    build: .
+    container_name: thermocycling-mlflow
+    ports:
+      - "5050:5050"
+    command: >
+      mlflow server
+      --host 0.0.0.0
+      --port 5050
+      --backend-store-uri sqlite:////app/mlflow.db
+      --default-artifact-root file:/app/mlruns
+    volumes:
+      - ./mlruns:/app/mlruns
+      - ./mlflow.db:/app/mlflow.db
+
+  train:
+    build: .
+    container_name: thermocycling-train
+    depends_on:
+      - mlflow
+    # Override Dockerfile ENTRYPOINT so this container does NOT start its own MLflow server
+    entrypoint: ["python"]
+    command: ["scripts/run_optimization_from_config.py", "configs/config_catboost_regression.yaml"]
+    volumes:
+      - ./data:/app/data
+      - ./configs:/app/configs
+      - ./mlruns:/app/mlruns
+      - ./mlflow.db:/app/mlflow.db
+      - ./optuna_studies.db:/app/optuna_studies.db
