@@ -15,8 +15,8 @@ data:
     envelope_ind: [201]
 
 preprocessing:
-  cv_start_cycle: 7
-  cv_test_size: 1
+  cv_start_cycle: 6
+  cv_test_size: 2
   look_back_range: [20, 100]
   n_components_range: [10, 100]
 
