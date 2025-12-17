@@ -6,11 +6,12 @@ LSTM model creation and training functions for time-series regression.
 
 import numpy as np
 import tensorflow as tf
+from tensorflow.keras import Input  # pyright: ignore[reportMissingImports]
 from tensorflow.keras.models import Sequential  # pyright: ignore[reportMissingImports]
 from tensorflow.keras.layers import LSTM, Dense, Dropout  # pyright: ignore[reportMissingImports]
 from tensorflow.keras.optimizers import Adam  # pyright: ignore[reportMissingImports]
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau  # pyright: ignore[reportMissingImports]
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import root_mean_squared_error
 from typing import Optional, Dict, Any
 
 
@@ -21,7 +22,7 @@ def build_lstm(
     n_units: int = 64,
     dropout: float = 0.2,
     learning_rate: float = 0.001,
-    loss: str = 'mean_squared_error'
+    loss: str = 'mse'
 ) -> tf.keras.Model:
     """
     Build LSTM model for multi-output regression.
@@ -47,6 +48,7 @@ def build_lstm(
         ... )
     """
     model = Sequential(name='LSTM_MultiOutput')
+    model.add(Input(shape = input_shape))
     
     # Add LSTM layers
     for layer_idx in range(n_layers, 0, -1):
@@ -147,9 +149,8 @@ def train_lstm(
     
     # Evaluate on validation set
     y_pred = model.predict(X_val, batch_size=batch_size, verbose=0)
-    val_rmse = mean_squared_error(
+    val_rmse = root_mean_squared_error(
         y_val, y_pred, 
-        squared=False, 
         multioutput='uniform_average'
     )
     
@@ -188,16 +189,14 @@ def evaluate_lstm(
     y_pred = model.predict(X_test, batch_size=batch_size, verbose=0)
     
     # Overall RMSE
-    rmse_overall = mean_squared_error(
+    rmse_overall = root_mean_squared_error(
         y_test, y_pred, 
-        squared=False, 
         multioutput='uniform_average'
     )
     
     # Per-output RMSE
-    rmse_per_output = mean_squared_error(
+    rmse_per_output = root_mean_squared_error(
         y_test, y_pred, 
-        squared=False, 
         multioutput='raw_values'
     )
     

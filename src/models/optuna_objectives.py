@@ -94,7 +94,7 @@ class LSTMRegressorObjective:
             
             for fold_idx, fold in enumerate(cv_splitter):
                 # Build model
-                input_shape = (fold.train_X.shape[1], fold.train_X.shape[2])
+                input_shape = (fold.train_X.shape[1], fold.train_X.shape[2])  # fold.train_X.shape  #
                 output_shape = fold.train_y.shape[1]
                 
                 model = build_lstm(
@@ -207,7 +207,7 @@ class LSTMClassifierObjective:
             fold_accuracies = []
             
             for fold_idx, fold in enumerate(cv_splitter):
-                input_shape = (fold.train_X.shape[1], fold.train_X.shape[2])
+                input_shape = (fold.train_X.shape[1], fold.train_X.shape[2])  # fold.train_X.shape  #
                 output_shape = fold.train_y.shape[1]  # Number of classes (one-hot)
                 
                 model = build_lstm(
