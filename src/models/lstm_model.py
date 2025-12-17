@@ -5,6 +5,8 @@ LSTM model creation and training functions for time-series regression.
 """
 
 import numpy as np
+from optuna.integration import TFKerasPruningCallback
+from optuna import Trial, TrialPruned
 import tensorflow as tf
 from tensorflow.keras import Input  # pyright: ignore[reportMissingImports]
 from tensorflow.keras.models import Sequential  # pyright: ignore[reportMissingImports]
@@ -14,6 +16,8 @@ from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau  # pyrig
 from sklearn.metrics import root_mean_squared_error
 from typing import Optional, Dict, Any
 
+import logging
+logger = logging.getLogger(__name__)
 
 def build_lstm(
     input_shape: tuple,
@@ -90,32 +94,19 @@ def train_lstm(
     patience: int = 30,
     min_delta: float = 0.001,
     verbose: int = 0,
-    reduce_lr: bool = True
+    reduce_lr: bool = True,
+    trial: Optional[Trial] = None, 
+    fold_idx: Optional[int] = None 
 ) -> Dict[str, Any]:
     """
-    Train LSTM model with early stopping.
+    Train LSTM model with optional Optuna pruning callback.
     
     Args:
-        model: Compiled Keras model
-        X_train: Training sequences (n_samples, look_back, n_features)
-        y_train: Training targets (n_samples, n_outputs)
-        X_val: Validation sequences
-        y_val: Validation targets
-        epochs: Maximum epochs
-        batch_size: Batch size
-        patience: Early stopping patience
-        min_delta: Minimum change to qualify as improvement
-        verbose: Verbosity level (0=silent, 1=progress bar, 2=one line per epoch)
-        reduce_lr: Whether to reduce LR on plateau
-    
-    Returns:
-        Dictionary with:
-        - history: Training history
-        - best_epoch: Epoch with best validation loss
-        - val_rmse: Validation RMSE
-        - train_val_gap: Gap between train and val loss
+        ... (existing args)
+        trial: Optuna trial for pruning (optional)
+        fold_idx: Current fold index for reporting (optional)
     """
-    # Callbacks
+    # Existing callbacks
     callbacks = [
         EarlyStopping(
             monitor='val_loss',
@@ -137,42 +128,60 @@ def train_lstm(
             )
         )
     
-    # Train model
-    history = model.fit(
-        X_train, y_train,
-        validation_data=(X_val, y_val),
-        batch_size=batch_size,
-        epochs=epochs,
-        callbacks=callbacks,
-        verbose=verbose,
-        shuffle=False  # ⚠️ CRITICAL: Don't shuffle time-series!
-    )
+    # ✅ ADD OPTUNA PRUNING CALLBACK
+    if trial is not None:
+        callbacks.append(
+            TFKerasPruningCallback(
+                trial,
+                monitor='val_loss'
+            )
+        )
     
-    # Evaluate on validation set
-    y_pred = model.predict(X_val, batch_size=batch_size, verbose=0)
-    val_rmse = root_mean_squared_error(
-        y_val, y_pred, 
-        multioutput='uniform_average'
-    )
+    # ✅ WRAP TRAINING IN TRY-EXCEPT
+    try:
+        history = model.fit(
+            X_train, y_train,
+            validation_data=(X_val, y_val),
+            batch_size=batch_size,
+            epochs=epochs,
+            callbacks=callbacks,
+            verbose=verbose,
+            shuffle=False
+        )
+        
+        # Evaluate on validation set
+        y_pred = model.predict(X_val, batch_size=batch_size, verbose=0)
+        val_rmse = root_mean_squared_error(
+            y_val, y_pred, 
+            multioutput='uniform_average'
+        )
+        
+        # Calculate train/val gap
+        train_loss = history.history['loss']
+        val_loss = history.history['val_loss']
+        
+        stable_slice = slice(-patience, None) if len(train_loss) > patience else slice(None)
+        train_val_gap = np.mean(np.abs(
+            np.array(train_loss[stable_slice]) - np.array(val_loss[stable_slice])
+        ))
+        
+        return {
+            'history': history.history,
+            'best_epoch': len(train_loss),
+            'val_rmse': float(val_rmse),
+            'train_val_gap': float(train_val_gap),
+            'final_train_loss': float(train_loss[-1]),
+            'final_val_loss': float(val_loss[-1]),
+            'pruned': False 
+        }
     
-    # Calculate train/val gap (stability metric)
-    train_loss = history.history['loss']
-    val_loss = history.history['val_loss']
-    
-    # Focus on last `patience` epochs (most stable part)
-    stable_slice = slice(-patience, None) if len(train_loss) > patience else slice(None)
-    train_val_gap = np.mean(np.abs(
-        np.array(train_loss[stable_slice]) - np.array(val_loss[stable_slice])
-    ))
-    
-    return {
-        'history': history.history,
-        'best_epoch': len(train_loss),
-        'val_rmse': float(val_rmse),
-        'train_val_gap': float(train_val_gap),
-        'final_train_loss': float(train_loss[-1]),
-        'final_val_loss': float(val_loss[-1])
-    }
+    # ✅ CATCH PRUNING EXCEPTION
+    except TrialPruned:
+        logger.info(f"Trial pruned at fold {fold_idx}")
+        return {
+            'pruned': True, 
+            'val_rmse': float('inf')
+        }
 
 
 def evaluate_lstm(

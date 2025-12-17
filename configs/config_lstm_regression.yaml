@@ -1,8 +1,8 @@
 # Configuration for LSTM Regression Optimization
 
 experiment:
-  name: "SWCNT_LSTM_Regression"
-  study_name: "lstm_regression_v1"
+  name: "SWCNT_LSTM_Regression_v2"
+  study_name: "lstm_regression_v2"
   task: "regression"
   model_type: "lstm"
 
@@ -17,31 +17,35 @@ data:
 preprocessing:
   cv_start_cycle: 7
   cv_test_size: 1
-  look_back_range: [20, 60]
-  n_components_range: [50, 150]
+  look_back_range: [20, 100]
+  n_components_range: [10, 100]
 
 model:
-  n_layers_range: [1, 2]
-  n_units_range: [16, 32]
+  n_layers_range: [1, 3]
+  n_units_range: [16, 96]
   n_units_step: 16
   dropout_range: [0.1, 0.5]
-  learning_rate_range: [1.0e-4, 1.0e-2]
+  learning_rate_range: [5.0e-5, 1.0e-1]
   batch_size_options: [32, 64, 128, 256]
   epochs: 100
-  patience: 15
+  patience: 20
 
 optimization:
-  n_trials: 10
+  n_trials: 100
   timeout: null  # seconds, null = no timeout
   direction: "minimize"  # minimize RMSE
   pruner:
     type: "MedianPruner"
-    n_startup_trials: 10
-    n_warmup_steps: 2
-    interval_steps: 1
+    n_startup_trials: 5  # Reduced for 1-2 CV folds
+    n_warmup_steps: 1     # Check after 1st fold
+    interval_steps: 1     # Check every epoch/fold
+
+storage:
+  optuna: "sqlite:///optuna_studies.db"  # Persistent Optuna storage
+  mlflow: "sqlite:///mlflow.db"          # Persistent MLflow storage
 
 mlflow:
-  tracking_uri: "mlruns"
+  tracking_uri: "sqlite:///mlflow.db"
   artifact_location: null
   log_models: true
   log_plots: true

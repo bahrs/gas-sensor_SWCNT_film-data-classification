@@ -2,6 +2,7 @@
 optuna_objectives.py
 
 Optuna objective functions with MLflow integration for hyperparameter optimization.
+Includes per-epoch pruning for faster optimization.
 """
 
 import os
@@ -45,6 +46,7 @@ class LSTMRegressorObjective:
     Optuna objective for LSTM regression hyperparameter optimization.
     
     Uses time-series CV to evaluate hyperparameters across multiple folds.
+    Includes per-epoch pruning for faster optimization.
     """
     
     def __init__(
@@ -85,9 +87,6 @@ class LSTMRegressorObjective:
             'patience': 30
         }
         
-        # Log all params to MLflow
-        #mlflow.log_params(params)
-        
         try:
             # Create CV splits with these hyperparameters
             cv_splitter = create_time_series_folds(
@@ -105,10 +104,11 @@ class LSTMRegressorObjective:
             # Train on each fold
             fold_rmses = []
             fold_gaps = []
+            fold_epochs = []
             
             for fold_idx, fold in enumerate(cv_splitter):
                 # Build model
-                input_shape = (fold.train_X.shape[1], fold.train_X.shape[2])  # fold.train_X.shape  #
+                input_shape = (fold.train_X.shape[1], fold.train_X.shape[2])
                 output_shape = fold.train_y.shape[1]
                 
                 model = build_lstm(
@@ -120,7 +120,7 @@ class LSTMRegressorObjective:
                     learning_rate=params['learning_rate']
                 )
                 
-                # Train model
+                # Train model with pruning callback
                 results = train_lstm(
                     model,
                     fold.train_X, fold.train_y,
@@ -128,22 +128,20 @@ class LSTMRegressorObjective:
                     epochs=params['epochs'],
                     batch_size=params['batch_size'],
                     patience=params['patience'],
-                    verbose=0
+                    verbose=0,
+                    trial=trial,  # Enable per-epoch pruning
+                    fold_idx=fold_idx
                 )
+                
+                # Check if pruned during training
+                if results.get('pruned', False):
+                    raise optuna.TrialPruned()
                 
                 fold_rmses.append(results['val_rmse'])
                 fold_gaps.append(results['train_val_gap'])
+                fold_epochs.append(results['best_epoch'])
                 
-                # Log fold-specific metrics
-                # mlflow.log_metrics({
-                #     f'fold_{fold_idx}_rmse': results['val_rmse'],
-                #     f'fold_{fold_idx}_train_val_gap': results['train_val_gap'],
-                #     f'fold_{fold_idx}_best_epoch': results['best_epoch']
-                # })
-                
-                
-                
-                # Prune trial if performance is poor
+                # Report after each fold for inter-fold pruning
                 trial.report(results['val_rmse'], fold_idx)
                 if trial.should_prune():
                     raise optuna.TrialPruned()
@@ -152,23 +150,26 @@ class LSTMRegressorObjective:
             mean_rmse = np.mean(fold_rmses)
             std_rmse = np.std(fold_rmses)
             mean_gap = np.mean(fold_gaps)
+            mean_epochs = np.mean(fold_epochs)
             
-            # mlflow.log_metrics({
-            #     'mean_cv_rmse': mean_rmse,
-            #     'std_cv_rmse': std_rmse,
-            #     'mean_train_val_gap': mean_gap,
-            #     'n_folds': len(fold_rmses)
-            # })
-            # ✅ THIS WORKS with nested runs - Optuna stores it
+            # Store metrics as user attributes (Optuna handles these properly)
             trial.set_user_attr('mean_rmse', float(mean_rmse))
             trial.set_user_attr('std_rmse', float(std_rmse))
-            trial.set_user_attr('cv_stability', float(np.std(fold_rmses) / np.mean(fold_rmses)))
-
-            for fold_idx, rmse in enumerate(fold_rmses):
+            trial.set_user_attr('cv_stability', float(std_rmse / mean_rmse))
+            trial.set_user_attr('mean_train_val_gap', float(mean_gap))
+            trial.set_user_attr('mean_epochs', float(mean_epochs))
+            
+            # Store per-fold metrics
+            for fold_idx, (rmse, gap, epochs) in enumerate(zip(fold_rmses, fold_gaps, fold_epochs)):
                 trial.set_user_attr(f'fold_{fold_idx}_rmse', float(rmse))
+                trial.set_user_attr(f'fold_{fold_idx}_gap', float(gap))
+                trial.set_user_attr(f'fold_{fold_idx}_epochs', int(epochs))
             
             return mean_rmse
             
+        except optuna.TrialPruned:
+            # Re-raise pruned exception
+            raise
         except Exception as e:
             logger.error(f"Trial {trial.number} failed: {e}")
             trial.set_user_attr('error', str(e))
@@ -213,8 +214,6 @@ class LSTMClassifierObjective:
             'patience': 30
         }
         
-        #mlflow.log_params(params)
-        
         try:
             cv_splitter = create_time_series_folds(
                 self.df,
@@ -230,7 +229,7 @@ class LSTMClassifierObjective:
             fold_accuracies = []
             
             for fold_idx, fold in enumerate(cv_splitter):
-                input_shape = (fold.train_X.shape[1], fold.train_X.shape[2])  # fold.train_X.shape  #
+                input_shape = (fold.train_X.shape[1], fold.train_X.shape[2])
                 output_shape = fold.train_y.shape[1]  # Number of classes (one-hot)
                 
                 model = build_lstm(
@@ -250,21 +249,21 @@ class LSTMClassifierObjective:
                     epochs=params['epochs'],
                     batch_size=params['batch_size'],
                     patience=params['patience'],
-                    verbose=0
+                    verbose=0,
+                    trial=trial,
+                    fold_idx=fold_idx
                 )
                 
-                # Get accuracy from final validation loss
+                if results.get('pruned', False):
+                    raise optuna.TrialPruned()
+                
+                # Get accuracy from final validation
                 y_pred = model.predict(fold.test_X, verbose=0)
                 y_pred_classes = np.argmax(y_pred, axis=1)
                 y_true_classes = np.argmax(fold.test_y, axis=1)
                 accuracy = np.mean(y_pred_classes == y_true_classes)
                 
                 fold_accuracies.append(accuracy)
-                
-                # mlflow.log_metrics({
-                #     f'fold_{fold_idx}_accuracy': accuracy,
-                #     f'fold_{fold_idx}_val_loss': results['final_val_loss']
-                # })
                 
                 trial.report(accuracy, fold_idx)
                 if trial.should_prune():
@@ -273,15 +272,16 @@ class LSTMClassifierObjective:
             mean_accuracy = np.mean(fold_accuracies)
             std_accuracy = np.std(fold_accuracies)
             
-            # mlflow.log_metrics({
-            #     'mean_cv_accuracy': mean_accuracy,
-            #     'std_cv_accuracy': std_accuracy,
-            #     'n_folds': len(fold_accuracies)
-            # })
+            trial.set_user_attr('mean_accuracy', float(mean_accuracy))
+            trial.set_user_attr('std_accuracy', float(std_accuracy))
             
+            for fold_idx, acc in enumerate(fold_accuracies):
+                trial.set_user_attr(f'fold_{fold_idx}_accuracy', float(acc))
             
             return mean_accuracy
             
+        except optuna.TrialPruned:
+            raise
         except Exception as e:
             logger.error(f"Trial {trial.number} failed: {e}")
             trial.set_user_attr('error', str(e))
@@ -324,8 +324,6 @@ class CatBoostClassifierObjective:
             'l2_leaf_reg': trial.suggest_float('l2_leaf_reg', 1.0, 20.0)
         }
         
-        #mlflow.log_params(params)
-        
         try:
             # Create CV splits
             cv_splitter = create_time_series_folds(
@@ -356,20 +354,19 @@ class CatBoostClassifierObjective:
                     fold.train_X, fold.train_y,
                     fold.test_X, fold.test_y,
                     early_stopping_rounds=50,
-                    verbose=False
+                    verbose=False,
+                    trial=trial,  # Enable pruning
+                    fold_idx=fold_idx
                 )
+                
+                # Check if pruned
+                if metrics.get('pruned', False):
+                    raise optuna.TrialPruned()
                 
                 fold_f1_scores.append(metrics['val_f1_macro'])
                 fold_accuracies.append(metrics['val_accuracy'])
                 
-                # Log fold metrics
-                # mlflow.log_metrics({
-                #     f'fold_{fold_idx}_f1_macro': metrics['val_f1_macro'],
-                #     f'fold_{fold_idx}_accuracy': metrics['val_accuracy'],
-                #     f'fold_{fold_idx}_best_iteration': metrics['best_iteration']
-                # })
-                
-                # Prune if poor performance
+                # Report after each fold
                 trial.report(metrics['val_f1_macro'], fold_idx)
                 if trial.should_prune():
                     raise optuna.TrialPruned()
@@ -379,15 +376,18 @@ class CatBoostClassifierObjective:
             std_f1 = np.std(fold_f1_scores)
             mean_acc = np.mean(fold_accuracies)
             
-            # mlflow.log_metrics({
-            #     'mean_cv_f1_macro': mean_f1,
-            #     'std_cv_f1_macro': std_f1,
-            #     'mean_cv_accuracy': mean_acc,
-            #     'n_folds': len(fold_f1_scores)
-            # })
+            trial.set_user_attr('mean_f1', float(mean_f1))
+            trial.set_user_attr('std_f1', float(std_f1))
+            trial.set_user_attr('mean_accuracy', float(mean_acc))
+            
+            for fold_idx, (f1, acc) in enumerate(zip(fold_f1_scores, fold_accuracies)):
+                trial.set_user_attr(f'fold_{fold_idx}_f1', float(f1))
+                trial.set_user_attr(f'fold_{fold_idx}_accuracy', float(acc))
             
             return mean_f1
             
+        except optuna.TrialPruned:
+            raise
         except Exception as e:
             logger.error(f"Trial {trial.number} failed: {e}")
             trial.set_user_attr('error', str(e))
@@ -428,8 +428,6 @@ class CatBoostRegressorObjective:
             'l2_leaf_reg': trial.suggest_float('l2_leaf_reg', 1.0, 20.0)
         }
         
-        #mlflow.log_params(params)
-        
         try:
             cv_splitter = create_time_series_folds(
                 self.df,
@@ -458,16 +456,15 @@ class CatBoostRegressorObjective:
                     fold.train_X, fold.train_y,
                     fold.test_X, fold.test_y,
                     early_stopping_rounds=50,
-                    verbose=False
+                    verbose=False,
+                    trial=trial,
+                    fold_idx=fold_idx
                 )
                 
-                fold_rmses.append(metrics['val_rmse'])
+                if metrics.get('pruned', False):
+                    raise optuna.TrialPruned()
                 
-                # mlflow.log_metrics({
-                #     f'fold_{fold_idx}_rmse': metrics['val_rmse'],
-                #     f'fold_{fold_idx}_mae': metrics['val_mae'],
-                #     f'fold_{fold_idx}_best_iteration': metrics['best_iteration']
-                # })
+                fold_rmses.append(metrics['val_rmse'])
                 
                 trial.report(metrics['val_rmse'], fold_idx)
                 if trial.should_prune():
@@ -476,21 +473,17 @@ class CatBoostRegressorObjective:
             mean_rmse = np.mean(fold_rmses)
             std_rmse = np.std(fold_rmses)
             
-            # mlflow.log_metrics({
-            #     'mean_cv_rmse': mean_rmse,
-            #     'std_cv_rmse': std_rmse,
-            #     'n_folds': len(fold_rmses)
-            # })
-            # ✅ THIS WORKS with nested runs - Optuna stores it
             trial.set_user_attr('mean_rmse', float(mean_rmse))
             trial.set_user_attr('std_rmse', float(std_rmse))
-            trial.set_user_attr('cv_stability', float(np.std(fold_rmses) / np.mean(fold_rmses)))
-
+            trial.set_user_attr('cv_stability', float(std_rmse / mean_rmse))
+            
             for fold_idx, rmse in enumerate(fold_rmses):
                 trial.set_user_attr(f'fold_{fold_idx}_rmse', float(rmse))
             
             return mean_rmse
             
+        except optuna.TrialPruned:
+            raise
         except Exception as e:
             logger.error(f"Trial {trial.number} failed: {e}")
             trial.set_user_attr('error', str(e))
@@ -510,7 +503,9 @@ def run_optimization(
     timeout: Optional[int] = None,
     direction: str = "minimize",
     objective_kwargs: Optional[Dict] = None,
-    ) -> optuna.Study:
+    storage: Optional[str] = None,
+    pruner_config: Optional[Dict] = None
+) -> optuna.Study:
     """
     Args:
         objective_class: Objective class (e.g., LSTMRegressorObjective)
@@ -521,30 +516,42 @@ def run_optimization(
         timeout: Timeout in seconds (None = no timeout)
         direction: 'minimize' or 'maximize'
         objective_kwargs: Additional kwargs for objective __init__
+        storage: Optuna storage backend (default: SQLite)
+        pruner_config: Pruner configuration dict
     
     Returns:
         Completed Optuna study
-
-    Fixes MLflow "run already active" by using:
-      - one parent run for the study
-      - nested runs per trial via Optuna MLflowCallback
     """
-    # Set MLflow experiment
+    # Use SQLite storage by default for persistence
+    if storage is None:
+        storage = "sqlite:///optuna_studies.db"
+    
+    # Set MLflow to use SQLite backend
+    mlflow_tracking_uri = "sqlite:///mlflow.db"
+    mlflow.set_tracking_uri(mlflow_tracking_uri)
     mlflow.set_experiment(mlflow_experiment_name)
 
-    # Defensive: close any previously active run (can happen after crashes)
+    # Defensive: close any previously active run
     while mlflow.active_run() is not None:
         mlflow.end_run()
 
-    # Create Optuna study
+    # Configure pruner
+    if pruner_config is None:
+        pruner_config = {
+            'n_startup_trials': 5,
+            'n_warmup_steps': 1,
+            'interval_steps': 1
+        }
+    
+    pruner = optuna.pruners.MedianPruner(**pruner_config)
+
+    # Create Optuna study with persistent storage
     study = optuna.create_study(
         study_name=study_name,
         direction=direction,
-        pruner=optuna.pruners.MedianPruner(
-            n_startup_trials=10,
-            n_warmup_steps=2,
-            interval_steps=1,
-        ),
+        storage=storage,
+        load_if_exists=True,  # Resume if study exists
+        pruner=pruner
     )
 
     # Create objective
@@ -552,14 +559,16 @@ def run_optimization(
     objective = objective_class(df, **objective_kwargs)
 
     logger.info(f"Starting optimization: {study_name}")
+    logger.info(f"Storage: {storage}")
+    logger.info(f"MLflow: {mlflow_tracking_uri}")
 
     # Parent run for the whole study; trials will be nested runs
     with mlflow.start_run(run_name=f"study_{study_name}") as parent_run:
         # Create MLflow callback (nested trial runs)
         mlflc = MLflowCallback(
-            tracking_uri=mlflow.get_tracking_uri(),
+            tracking_uri=mlflow_tracking_uri,
             metric_name="value",
-            mlflow_kwargs={"nested": True},
+            mlflow_kwargs={"nested": True}
         )
 
         # Run optimization
@@ -568,28 +577,32 @@ def run_optimization(
             n_trials=n_trials,
             timeout=timeout,
             callbacks=[mlflc],
-            show_progress_bar=False,
-            n_jobs=1,  # Don't parallelize (MLflow logging issues)
+            show_progress_bar=True,
+            n_jobs=1  # Don't parallelize (MLflow logging issues)
         )
 
-        # Log best params/summary to the parent run
-        # IMPORTANT: Do NOT log trial params here when using Optuna's MLflowCallback.
-        # The callback logs params per-trial in its own (nested) MLflow run.
+        # Log summary to parent run
         mlflow.log_params({f"best__{k}": v for k, v in study.best_params.items()})
-        mlflow.log_metrics({"best_value": float(study.best_value),"n_trials": len(study.trials),})
+        mlflow.log_metrics({
+            "best_value": float(study.best_value),
+            "n_trials": len(study.trials),
+            "n_complete": len([t for t in study.trials if t.state == optuna.trial.TrialState.COMPLETE]),
+            "n_pruned": len([t for t in study.trials if t.state == optuna.trial.TrialState.PRUNED]),
+            "pruning_rate": len([t for t in study.trials if t.state == optuna.trial.TrialState.PRUNED]) / len(study.trials)
+        })
 
-        # Link to best trial run if Optuna callback saved it
+        # Link to best trial run
         try:
             best_trial = study.best_trial
-            run_id = best_trial.system_attrs.get("mlflow_run_id") or best_trial.system_attrs.get(
-                "run_id"
-            )
+            run_id = best_trial.system_attrs.get("mlflow_run_id") or best_trial.system_attrs.get("run_id")
             if run_id:
                 mlflow.set_tag("best_trial_run_id", run_id)
         except Exception:
             pass
 
     logger.info(f"Optimization complete. Best value: {study.best_value}")
+    logger.info(f"Pruning rate: {len([t for t in study.trials if t.state == optuna.trial.TrialState.PRUNED]) / len(study.trials):.1%}")
+    
     return study
 
 
