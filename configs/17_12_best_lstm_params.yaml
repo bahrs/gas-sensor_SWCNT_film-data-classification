@@ -1,0 +1,56 @@
+run_date: '2025-12-17'
+experiment: SWCNT_LSTM_Regression
+result:
+  best_value: 2.201514
+  metric: RMSE
+  direction: minimize
+  n_trials: 10
+  best_params:
+    look_back: 58
+    n_components: 140
+    n_layers: 2
+    n_units: 80
+    dropout: 0.1269034159455114
+    learning_rate: 0.0028366813984076994
+    batch_size: 64
+data:
+  feature_cols: 402
+  target_cols:
+  - NO2
+  - H2S
+  - Acet
+  dedrift_method: Exp_pd
+  dedrift_params:
+    alpha: 0.0217
+    envelope_ind:
+    - 201
+preprocessing:
+  cv_start_cycle: 7
+  cv_test_size: 1
+  look_back_range:
+  - 20
+  - 60
+  n_components_range:
+  - 50
+  - 150
+model:
+  n_layers_range:
+  - 1
+  - 2
+  n_units_range:
+  - 16
+  - 32
+  n_units_step: 16
+  dropout_range:
+  - 0.1
+  - 0.5
+  learning_rate_range:
+  - 0.0001
+  - 0.01
+  batch_size_options:
+  - 32
+  - 64
+  - 128
+  - 256
+  epochs: 100
+  patience: 15

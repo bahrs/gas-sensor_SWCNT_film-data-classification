@@ -59,7 +59,8 @@ def build_lstm(
             return_sequences=return_sequences,
             dropout=dropout,
             recurrent_dropout=dropout,
-            name=f'lstm_{n_layers - layer_idx + 1}'
+            name=f'lstm_{n_layers - layer_idx + 1}',
+            unroll=False  # Prevents excessive retracing
         ))
         
         # Halve units for next layer (minimum 8)

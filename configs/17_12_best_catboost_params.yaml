@@ -1,0 +1,46 @@
+run_date: '2025-12-17'
+experiment: SWCNT_CatBoost_Regression
+result:
+  best_value: 3.515803
+  metric: RMSE
+  direction: minimize
+  n_trials: 500
+  best_params:
+    n_components: 72
+    iterations: 1800
+    depth: 7
+    learning_rate: 0.09161886882204469
+    l2_leaf_reg: 7.4133288788772145
+data:
+  feature_cols: 402
+  target_cols:
+  - NO2
+  - H2S
+  - Acet
+  dedrift_method: Exp_pd
+  dedrift_params:
+    alpha: 0.0217
+    envelope_ind:
+    - 201
+preprocessing:
+  cv_start_cycle: 7
+  cv_test_size: 1
+  n_components_range:
+  - 50
+  - 200
+model:
+  iterations_range:
+  - 400
+  - 2000
+  iterations_step: 100
+  depth_range:
+  - 4
+  - 8
+  learning_rate_range:
+  - 0.001
+  - 0.3
+  l2_leaf_reg_range:
+  - 3.0
+  - 20.0
+  loss_function: MultiRMSE
+  early_stopping_rounds: 50

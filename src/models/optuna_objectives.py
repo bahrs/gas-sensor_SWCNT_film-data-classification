@@ -4,6 +4,20 @@ optuna_objectives.py
 Optuna objective functions with MLflow integration for hyperparameter optimization.
 """
 
+import os
+import warnings
+
+# Suppress TensorFlow warnings
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # 0=all, 1=info, 2=warning, 3=error
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'  # Disable oneDNN messages
+
+# Suppress other warnings
+warnings.filterwarnings('ignore', category=FutureWarning)
+warnings.filterwarnings('ignore', category=UserWarning)
+
+import tensorflow as tf
+tf.get_logger().setLevel('ERROR')
+
 import optuna
 from optuna.integration.mlflow import MLflowCallback
 import mlflow
@@ -127,6 +141,8 @@ class LSTMRegressorObjective:
                 #     f'fold_{fold_idx}_best_epoch': results['best_epoch']
                 # })
                 
+                
+                
                 # Prune trial if performance is poor
                 trial.report(results['val_rmse'], fold_idx)
                 if trial.should_prune():
@@ -143,6 +159,13 @@ class LSTMRegressorObjective:
             #     'mean_train_val_gap': mean_gap,
             #     'n_folds': len(fold_rmses)
             # })
+            # ✅ THIS WORKS with nested runs - Optuna stores it
+            trial.set_user_attr('mean_rmse', float(mean_rmse))
+            trial.set_user_attr('std_rmse', float(std_rmse))
+            trial.set_user_attr('cv_stability', float(np.std(fold_rmses) / np.mean(fold_rmses)))
+
+            for fold_idx, rmse in enumerate(fold_rmses):
+                trial.set_user_attr(f'fold_{fold_idx}_rmse', float(rmse))
             
             return mean_rmse
             
@@ -255,6 +278,7 @@ class LSTMClassifierObjective:
             #     'std_cv_accuracy': std_accuracy,
             #     'n_folds': len(fold_accuracies)
             # })
+            
             
             return mean_accuracy
             
@@ -457,6 +481,13 @@ class CatBoostRegressorObjective:
             #     'std_cv_rmse': std_rmse,
             #     'n_folds': len(fold_rmses)
             # })
+            # ✅ THIS WORKS with nested runs - Optuna stores it
+            trial.set_user_attr('mean_rmse', float(mean_rmse))
+            trial.set_user_attr('std_rmse', float(std_rmse))
+            trial.set_user_attr('cv_stability', float(np.std(fold_rmses) / np.mean(fold_rmses)))
+
+            for fold_idx, rmse in enumerate(fold_rmses):
+                trial.set_user_attr(f'fold_{fold_idx}_rmse', float(rmse))
             
             return mean_rmse
             
