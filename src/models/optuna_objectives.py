@@ -72,7 +72,7 @@ class LSTMRegressorObjective:
         }
         
         # Log all params to MLflow
-        mlflow.log_params(params)
+        #mlflow.log_params(params)
         
         try:
             # Create CV splits with these hyperparameters
@@ -121,11 +121,11 @@ class LSTMRegressorObjective:
                 fold_gaps.append(results['train_val_gap'])
                 
                 # Log fold-specific metrics
-                mlflow.log_metrics({
-                    f'fold_{fold_idx}_rmse': results['val_rmse'],
-                    f'fold_{fold_idx}_train_val_gap': results['train_val_gap'],
-                    f'fold_{fold_idx}_best_epoch': results['best_epoch']
-                })
+                # mlflow.log_metrics({
+                #     f'fold_{fold_idx}_rmse': results['val_rmse'],
+                #     f'fold_{fold_idx}_train_val_gap': results['train_val_gap'],
+                #     f'fold_{fold_idx}_best_epoch': results['best_epoch']
+                # })
                 
                 # Prune trial if performance is poor
                 trial.report(results['val_rmse'], fold_idx)
@@ -137,18 +137,18 @@ class LSTMRegressorObjective:
             std_rmse = np.std(fold_rmses)
             mean_gap = np.mean(fold_gaps)
             
-            mlflow.log_metrics({
-                'mean_cv_rmse': mean_rmse,
-                'std_cv_rmse': std_rmse,
-                'mean_train_val_gap': mean_gap,
-                'n_folds': len(fold_rmses)
-            })
+            # mlflow.log_metrics({
+            #     'mean_cv_rmse': mean_rmse,
+            #     'std_cv_rmse': std_rmse,
+            #     'mean_train_val_gap': mean_gap,
+            #     'n_folds': len(fold_rmses)
+            # })
             
             return mean_rmse
             
         except Exception as e:
             logger.error(f"Trial {trial.number} failed: {e}")
-            mlflow.log_param('error', str(e))
+            trial.set_user_attr('error', str(e))
             raise
 
 
@@ -190,7 +190,7 @@ class LSTMClassifierObjective:
             'patience': 30
         }
         
-        mlflow.log_params(params)
+        #mlflow.log_params(params)
         
         try:
             cv_splitter = create_time_series_folds(
@@ -238,10 +238,10 @@ class LSTMClassifierObjective:
                 
                 fold_accuracies.append(accuracy)
                 
-                mlflow.log_metrics({
-                    f'fold_{fold_idx}_accuracy': accuracy,
-                    f'fold_{fold_idx}_val_loss': results['final_val_loss']
-                })
+                # mlflow.log_metrics({
+                #     f'fold_{fold_idx}_accuracy': accuracy,
+                #     f'fold_{fold_idx}_val_loss': results['final_val_loss']
+                # })
                 
                 trial.report(accuracy, fold_idx)
                 if trial.should_prune():
@@ -250,17 +250,17 @@ class LSTMClassifierObjective:
             mean_accuracy = np.mean(fold_accuracies)
             std_accuracy = np.std(fold_accuracies)
             
-            mlflow.log_metrics({
-                'mean_cv_accuracy': mean_accuracy,
-                'std_cv_accuracy': std_accuracy,
-                'n_folds': len(fold_accuracies)
-            })
+            # mlflow.log_metrics({
+            #     'mean_cv_accuracy': mean_accuracy,
+            #     'std_cv_accuracy': std_accuracy,
+            #     'n_folds': len(fold_accuracies)
+            # })
             
             return mean_accuracy
             
         except Exception as e:
             logger.error(f"Trial {trial.number} failed: {e}")
-            mlflow.log_param('error', str(e))
+            trial.set_user_attr('error', str(e))
             raise
 
 
@@ -300,7 +300,7 @@ class CatBoostClassifierObjective:
             'l2_leaf_reg': trial.suggest_float('l2_leaf_reg', 1.0, 20.0)
         }
         
-        mlflow.log_params(params)
+        #mlflow.log_params(params)
         
         try:
             # Create CV splits
@@ -339,11 +339,11 @@ class CatBoostClassifierObjective:
                 fold_accuracies.append(metrics['val_accuracy'])
                 
                 # Log fold metrics
-                mlflow.log_metrics({
-                    f'fold_{fold_idx}_f1_macro': metrics['val_f1_macro'],
-                    f'fold_{fold_idx}_accuracy': metrics['val_accuracy'],
-                    f'fold_{fold_idx}_best_iteration': metrics['best_iteration']
-                })
+                # mlflow.log_metrics({
+                #     f'fold_{fold_idx}_f1_macro': metrics['val_f1_macro'],
+                #     f'fold_{fold_idx}_accuracy': metrics['val_accuracy'],
+                #     f'fold_{fold_idx}_best_iteration': metrics['best_iteration']
+                # })
                 
                 # Prune if poor performance
                 trial.report(metrics['val_f1_macro'], fold_idx)
@@ -355,18 +355,18 @@ class CatBoostClassifierObjective:
             std_f1 = np.std(fold_f1_scores)
             mean_acc = np.mean(fold_accuracies)
             
-            mlflow.log_metrics({
-                'mean_cv_f1_macro': mean_f1,
-                'std_cv_f1_macro': std_f1,
-                'mean_cv_accuracy': mean_acc,
-                'n_folds': len(fold_f1_scores)
-            })
+            # mlflow.log_metrics({
+            #     'mean_cv_f1_macro': mean_f1,
+            #     'std_cv_f1_macro': std_f1,
+            #     'mean_cv_accuracy': mean_acc,
+            #     'n_folds': len(fold_f1_scores)
+            # })
             
             return mean_f1
             
         except Exception as e:
             logger.error(f"Trial {trial.number} failed: {e}")
-            mlflow.log_param('error', str(e))
+            trial.set_user_attr('error', str(e))
             raise
 
 
@@ -404,7 +404,7 @@ class CatBoostRegressorObjective:
             'l2_leaf_reg': trial.suggest_float('l2_leaf_reg', 1.0, 20.0)
         }
         
-        mlflow.log_params(params)
+        #mlflow.log_params(params)
         
         try:
             cv_splitter = create_time_series_folds(
@@ -439,11 +439,11 @@ class CatBoostRegressorObjective:
                 
                 fold_rmses.append(metrics['val_rmse'])
                 
-                mlflow.log_metrics({
-                    f'fold_{fold_idx}_rmse': metrics['val_rmse'],
-                    f'fold_{fold_idx}_mae': metrics['val_mae'],
-                    f'fold_{fold_idx}_best_iteration': metrics['best_iteration']
-                })
+                # mlflow.log_metrics({
+                #     f'fold_{fold_idx}_rmse': metrics['val_rmse'],
+                #     f'fold_{fold_idx}_mae': metrics['val_mae'],
+                #     f'fold_{fold_idx}_best_iteration': metrics['best_iteration']
+                # })
                 
                 trial.report(metrics['val_rmse'], fold_idx)
                 if trial.should_prune():
@@ -452,17 +452,17 @@ class CatBoostRegressorObjective:
             mean_rmse = np.mean(fold_rmses)
             std_rmse = np.std(fold_rmses)
             
-            mlflow.log_metrics({
-                'mean_cv_rmse': mean_rmse,
-                'std_cv_rmse': std_rmse,
-                'n_folds': len(fold_rmses)
-            })
+            # mlflow.log_metrics({
+            #     'mean_cv_rmse': mean_rmse,
+            #     'std_cv_rmse': std_rmse,
+            #     'n_folds': len(fold_rmses)
+            # })
             
             return mean_rmse
             
         except Exception as e:
             logger.error(f"Trial {trial.number} failed: {e}")
-            mlflow.log_param('error', str(e))
+            trial.set_user_attr('error', str(e))
             raise
 
 
@@ -537,18 +537,15 @@ def run_optimization(
             n_trials=n_trials,
             timeout=timeout,
             callbacks=[mlflc],
-            show_progress_bar=True,
+            show_progress_bar=False,
             n_jobs=1,  # Don't parallelize (MLflow logging issues)
         )
 
         # Log best params/summary to the parent run
+        # IMPORTANT: Do NOT log trial params here when using Optuna's MLflowCallback.
+        # The callback logs params per-trial in its own (nested) MLflow run.
         mlflow.log_params({f"best__{k}": v for k, v in study.best_params.items()})
-        mlflow.log_metrics(
-            {
-                "best_value": float(study.best_value),
-                "n_trials": len(study.trials),
-            }
-        )
+        mlflow.log_metrics({"best_value": float(study.best_value),"n_trials": len(study.trials),})
 
         # Link to best trial run if Optuna callback saved it
         try:

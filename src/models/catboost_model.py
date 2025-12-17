@@ -8,7 +8,7 @@ import numpy as np
 from catboost import CatBoostClassifier, CatBoostRegressor
 from sklearn.metrics import (
     f1_score, accuracy_score, classification_report,
-    mean_squared_error, mean_absolute_error
+    root_mean_squared_error, mean_absolute_error
 )
 from typing import Dict, Any
 
@@ -189,9 +189,8 @@ def train_catboost_regressor(
     y_pred = model.predict(X_val)
     
     # Overall metrics
-    rmse_overall = mean_squared_error(
+    rmse_overall = root_mean_squared_error(
         y_val, y_pred, 
-        squared=False, 
         multioutput='uniform_average'
     )
     mae_overall = mean_absolute_error(
@@ -200,9 +199,8 @@ def train_catboost_regressor(
     )
     
     # Per-output metrics
-    rmse_per_output = mean_squared_error(
+    rmse_per_output = root_mean_squared_error(
         y_val, y_pred, 
-        squared=False, 
         multioutput='raw_values'
     )
     
