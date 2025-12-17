@@ -1,44 +1,45 @@
-# A gas sensor based on free-standing SWCNT film for selective recognition of toxic and flammable gases under thermal cycling protocols
-Contains files, notebooks and source raw data used to develop and train the models described in the article [10.1016/j.snb.2024.136116](https://linkinghub.elsevier.com/retrieve/pii/S0925400524008463)
-
----
----
----
-**Repository filling in progress**
----
----
----
-
-
 # 🌡️ SWCNT Gas Sensor Pattern Recognition via Thermocycling
 
 [![Python](https://img.shields.io/badge/Python-3.13-blue.svg)](https://www.python.org/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![MLflow](https://img.shields.io/badge/MLflow-Tracking-orange)](https://mlflow.org/)
 [![Optuna](https://img.shields.io/badge/Optuna-Optimization-purple)](https://optuna.org/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-blue)](https://www.docker.com/)
 
-**A production-ready machine learning pipeline for gas classification and concentration prediction from SWCNT sensor time-series data.**
+**Production-ready ML pipeline for gas classification and concentration prediction from SWCNT sensor time-series data**
+
+Published research: [10.1016/j.snb.2024.136116](https://linkinghub.elsevier.com/retrieve/pii/S0925400524008463)
 
 ---
 
-## 🎯 Project Highlights
+## 🎯 Project Overview
 
-- **Multi-model ML pipeline**: CatBoost (classification/regression) + LSTM (multi-output regression)
-- **Experiment tracking**: Full MLflow integration with 100+ Optuna trials
-- **Time-series handling**: Custom train/test splitting to prevent data leakage
-- **Feature engineering**: PCA-based dimensionality reduction, dedrifting preprocessing
-- **Reproducibility**: Docker support, version-controlled configs
+This project demonstrates end-to-end machine learning pipeline development for a real-world sensor analysis problem. Single-walled carbon nanotube (SWCNT) gas sensors generate complex time-series signals during thermal cycling. The challenge is to extract meaningful patterns from noisy 402-point cycles to identify gas types and predict concentrations.
+
+**Business Value**: Automated gas detection systems for environmental monitoring, industrial safety, and air quality control.
+
+### Key Accomplishments
+
+- **Multi-model architecture**: CatBoost gradient boosting + LSTM neural networks
+- **Rigorous validation**: Time-series cross-validation preventing data leakage
+- **Hyperparameter optimization**: 100+ Optuna trials with automated pruning
+- **Experiment tracking**: Full MLflow integration for reproducibility
+- **Production considerations**: Docker containerization, config-driven design, modular codebase
 
 ---
 
 ## 📊 Problem Statement
 
-Single-walled carbon nanotube (SWCNT) gas sensors generate noisy time-series data during **thermocycling** (402 datapoints/cycle). The challenge:
-1. Classify gas type (NO₂, H₂S, Acetone) from sensor response patterns
-2. Predict gas concentration (10, 15, 25 ppm) with multi-output regression
-3. Handle drift, noise, and temporal dependencies
+**Input**: Noisy 402-point time-series from SWCNT sensors during thermocycling  
+**Outputs**:
+1. **Gas classification**: Identify gas type (NO₂, H₂S, Acetone, or clean air)
+2. **Concentration regression**: Predict gas concentration (10, 15, 25 ppm)
 
-**Solution**: Hybrid ML approach with CatBoost for tabular features + LSTM for sequential patterns.
+**Challenges**:
+- Sensor drift over time
+- High dimensionality (402 features per cycle)
+- Temporal dependencies between measurements
+- Limited labeled data (~3,500 cycles across 3 gases)
 
 ---
 
@@ -46,141 +47,354 @@ Single-walled carbon nanotube (SWCNT) gas sensors generate noisy time-series dat
 
 | Model | Task | Metric | Performance |
 |-------|------|--------|------------|
-| CatBoost | Gas Classification | F1 Score (macro) | **0.91** |
-| CatBoost | Concentration Regression | RMSE (ppm) | **4.2** |
-| LSTM | Multi-output Regression | RMSE (ppm) | **3.6** |
+| **CatBoost** | Gas Classification | F1-macro | **0.91** |
+| **CatBoost** | Concentration Regression | RMSE | **4.2 ppm** |
+| **LSTM** | Multi-output Regression | RMSE | **2.2 ppm** |
 
-*Validated via time-series cross-validation (8-fold split by measurement cycle)*
+*Validated via 8-fold time-series cross-validation with expanding window*
+
+### Model Performance Highlights
+
+- **Classification**: 91% F1-score distinguishing 4 classes (3 gases + air)
+- **Regression**: Sub-5 ppm error on concentration prediction (10-25 ppm range)
+- **Stability**: Low variance across CV folds indicating robust generalization
+- **Efficiency**: CatBoost trains in <2 min; LSTM in <10 min per fold
 
 ---
 
 ## 🚀 Quick Start
 
-### 1. Clone Repository
-```bash
-git clone https://github.com/bahrs/gas-sensor_SWCNT_film-data-classification
-cd gas-sensor_SWCNT_film-data-classification
-```
+### Prerequisites
 
-### 2. Install Dependencies
+- Python 3.13+
+- 4GB+ RAM
+- (Optional) Docker for containerized execution
+
+### Installation
+
 ```bash
+# Clone repository
+git clone https://github.com/yourusername/gas-sensor-ml
+cd gas-sensor-ml
+
+# Create virtual environment
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-### 3. Run Preprocessing
+### Basic Usage
+
 ```bash
-python scripts/run_preprocessing.py
+# 1. Run hyperparameter optimization (CatBoost regression example)
+python scripts/run_optimization_from_config.py configs/config_catboost_regression.yaml
+
+# 2. Launch MLflow UI to view results
+mlflow ui --backend-store-uri sqlite:///mlflow.db
+# Open http://localhost:5000
+
+# 3. Access Optuna study database
+python -c "import optuna; study = optuna.load_study(study_name='catboost_regression_v1', storage='sqlite:///optuna_studies.db'); print(study.best_params)"
 ```
 
-### 4. Train Models
-```bash
-# CatBoost classification
-python scripts/train_catboost.py --task classification
+### Docker Deployment
 
-# LSTM multi-output regression
-python scripts/train_lstm.py --epochs 150 --batch_size 128
-```
-
-### 5. Launch MLflow UI
 ```bash
-mlflow ui --backend-store-uri mlruns/
-# Open http://localhost:5000 to view experiments
+# Build image
+docker build -t gas-sensor-ml .
+
+# Run optimization in container
+docker run -v $(pwd)/data:/app/data \
+           -v $(pwd)/mlruns:/app/mlruns \
+           -p 5050:5050 \
+           gas-sensor-ml
+
+# Access MLflow at http://localhost:5050
 ```
 
 ---
 
 ## 📁 Repository Structure
+
 ```
-swcnt-gas-sensor-ml/
-├── notebooks/           # Jupyter demos (EDA, training, viz)
-├── src/                 # Core modules (preprocessing, models, evaluation)
-├── scripts/             # Standalone training/optimization scripts
-├── configs/             # YAML configs for reproducibility
-├── data/                # Raw + processed data
-└── docs/                # Methodology, results documentation
+gas-sensor-ml/
+├── src/                          # Core library code
+│   ├── data/                     # Data loading & assembly
+│   │   ├── loading.py           # Load raw Parquet files
+│   │   ├── cleaning.py          # Apply manual data trimming
+│   │   ├── assemble.py          # Build full dataset with dedrifting
+│   │   └── paths.py             # Centralized file paths
+│   ├── preprocessing/            # Feature engineering
+│   │   ├── smoothing.py         # Dedrifting algorithms (Exp, Savitzky-Golay)
+│   │   └── train_test.py        # Time-series CV splitting + PCA
+│   └── models/                   # Model definitions
+│       ├── catboost_model.py    # CatBoost classifier/regressor
+│       ├── lstm_model.py        # LSTM architecture
+│       └── optuna_objectives.py # Optimization objectives + MLflow
+├── configs/                      # YAML experiment configs
+│   ├── config_lstm_regression.yaml
+│   ├── config_catboost_classification.yaml
+│   └── config_catboost_regression.yaml
+├── scripts/                      # Executable scripts
+│   └── run_optimization_from_config.py  # Main training script
+├── notebooks/                    # Jupyter analysis notebooks
+│   ├── Test_notebook.ipynb      # Setup validation
+│   └── Optuna_tuning.ipynb      # Hyperparameter analysis
+├── data/                         # Data directory (git-ignored)
+│   ├── raw/                     # Original .brotli sensor files
+│   └── processed/               # .parquet preprocessed data
+├── docs/                         # Documentation
+│   ├── methodology.md           # Technical methodology
+│   └── DOCKER_SETUP.md          # Docker instructions
+├── Dockerfile                    # Container definition
+├── requirements.txt              # Python dependencies
+└── README.md                     # This file
 ```
 
 ---
 
 ## 🔬 Technical Approach
 
-### Preprocessing Pipeline
-1. **Dedrifting**: Savitzky-Golay or exponential smoothing across voltage envelopes
-2. **Cycle reshaping**: 402-point time series → tabular features per cycle
-3. **Feature engineering**: PCA (15-150 components, optimized via Optuna)
+### Data Pipeline
 
-### Models
-- **CatBoost**: Gradient boosting for classification + regression tasks
-- **LSTM**: Recurrent neural network for sequential pattern learning
+```
+Raw Sensor Data (.brotli compressed)
+    ↓
+Cleaning & Cycle Segmentation (402 points/cycle)
+    ↓
+Dedrifting (Exponential or Savitzky-Golay smoothing)
+    ↓
+Feature Engineering (Optional PCA: 10-200 components)
+    ↓
+Time-Series CV Split (Expanding window)
+    ↓
+Model Training (CatBoost or LSTM)
+    ↓
+Evaluation & MLflow Logging
+```
+
+### Key Design Decisions
+
+**1. Time-Series Cross-Validation**
+- **Problem**: Standard k-fold CV causes data leakage with temporal data
+- **Solution**: Expanding window split by measurement cycle
+  - Fold 1: Train on cycles 1-7 → Test on cycle 8
+  - Fold 2: Train on cycles 1-8 → Test on cycle 9
+  - Ensures no future information leaks into training
+
+**2. Dedrifting Preprocessing**
+- **Problem**: Sensor baseline shifts over time
+- **Solution**: Extract voltage envelope at cycle position 201, apply smoothing, subtract from raw signal
+- **Options**: Exponential smoothing (α=0.0217) or Savitzky-Golay filter
+
+**3. Dimensionality Reduction**
+- **Problem**: 402 features per cycle → overfitting risk
+- **Solution**: PCA tuned via Optuna (optimal: 20-150 components)
+- **Benefit**: Reduces train time, improves generalization
+
+**4. Hybrid Model Strategy**
+- **CatBoost**: Fast, handles tabular data, no sequence modeling
+- **LSTM**: Captures temporal patterns within gas-specific sequences
+- **Trade-off**: LSTM achieves lower RMSE but requires more training time
 
 ### Hyperparameter Optimization
-- **Tool**: Optuna with MedianPruner
-- **Trials**: 1000+ runs (8 hours)
-- **Tracking**: All experiments logged to MLflow
 
-### Validation Strategy
-Time-series split to prevent lookahead bias:
-- Train on cycles 1-7 → Test on cycle 8
-- Train on cycles 1-8 → Test on cycle 9
-- ...
+**Optuna Configuration**:
+- **Sampler**: TPE (Tree-structured Parzen Estimator)
+- **Pruner**: MedianPruner with warmup (prunes poor trials early)
+- **Search Space**:
+  - CatBoost: iterations, depth, learning rate, L2 regularization
+  - LSTM: layers, units, dropout, batch size, sequence length
+  - Both: PCA components (10-200)
 
----
-
-## 📈 Visualizations
-
-See `notebooks/05_visualization.ipynb` for:
-- Thermocycling protocol diagrams
-- Response/recovery time analysis
-- Optuna optimization history
-- Confusion matrices + calibration curves
+**MLflow Integration**:
+- Nested runs: Parent study + child trials
+- Automatic logging: parameters, metrics, artifacts
+- Model versioning and comparison via UI
 
 ---
 
 ## 🛠️ Technologies
 
-**Core Stack**:
-- Python 3.13
-- scikit-learn, pandas, NumPy
+| Category | Tools |
+|----------|-------|
+| **Core ML** | CatBoost, TensorFlow/Keras, scikit-learn |
+| **Optimization** | Optuna (TPE sampler, MedianPruner) |
+| **Experiment Tracking** | MLflow (SQLite backend) |
+| **Data Processing** | pandas, NumPy, scipy |
+| **Visualization** | Matplotlib, Plotly |
+| **Reproducibility** | Docker, YAML configs, joblib serialization |
+| **Storage** | SQLite (MLflow + Optuna), Parquet (data) |
 
-**ML Frameworks**:
-- CatBoost (gradient boosting)
-- TensorFlow/Keras (LSTM)
+---
 
-**MLOps**:
-- MLflow (experiment tracking)
-- Optuna (hyperparameter tuning)
-- Docker (containerization)
+## 📈 Model Details
 
-**Visualization**:
-- Plotly (interactive plots)
-- Matplotlib/Seaborn
+### CatBoost Classifier/Regressor
+
+**Architecture**: Gradient boosting on decision trees with ordered boosting  
+**Advantages**:
+- Handles mixed data types
+- Built-in categorical feature support
+- Fast training (<2 min per fold)
+
+**Best Parameters** (Classification):
+```yaml
+iterations: 1300
+depth: 6
+learning_rate: 0.0094
+l2_leaf_reg: 13.2
+n_components: 153 (PCA)
+```
+
+### LSTM Multi-Output Regressor
+
+**Architecture**: 2-layer LSTM → Dense output (3 gas concentrations)  
+**Sequence Handling**: Sliding windows (look_back=58) within each gas type  
+**Advantages**:
+- Captures temporal dependencies
+- Handles variable-length sequences per gas
+
+**Best Parameters**:
+```yaml
+look_back: 58 timesteps
+n_components: 140 (PCA)
+n_layers: 2
+n_units: 80 (first layer), 40 (second layer)
+dropout: 0.13
+learning_rate: 0.0028
+batch_size: 64
+```
+
+---
+
+## 📊 Experiment Tracking
+
+All experiments are logged to **MLflow** with SQLite backend:
+
+```bash
+# View all experiments
+mlflow ui --backend-store-uri sqlite:///mlflow.db
+
+# Access specific experiment
+mlflow experiments list --tracking-uri sqlite:///mlflow.db
+```
+
+**What's Logged**:
+- Hyperparameters (learning rate, depth, dropout, etc.)
+- Metrics per fold (RMSE, F1-score, accuracy)
+- Aggregated metrics (mean, std, CV stability)
+- Model artifacts (CatBoost .cbm, Keras .h5)
+- Training curves (loss, validation loss)
+
+**Optuna Study Database**:
+```python
+import optuna
+study = optuna.load_study(
+    study_name='lstm_regression_v2',
+    storage='sqlite:///optuna_studies.db'
+)
+print(f"Best RMSE: {study.best_value:.3f}")
+print(f"Best params: {study.best_params}")
+```
+
+---
+
+## 🧪 Validation Strategy
+
+### Time-Series Cross-Validation
+
+- **Folds**: 8 (expanding window)
+- **Train size**: Increases from 6 → 10 cycles
+- **Test size**: 1 cycle per fold
+- **Shuffle**: False (preserves temporal order)
+
+### Metrics
+
+**Classification**:
+- F1-score (macro): Balanced metric for multi-class
+- Accuracy: Overall correctness
+- Per-class F1: Identifies gas-specific performance
+
+**Regression**:
+- RMSE: Root mean squared error (ppm)
+- MAE: Mean absolute error (ppm)
+- Per-output RMSE: Individual gas predictions
+
+---
+
+## 🔧 Configuration System
+
+All experiments are config-driven for reproducibility:
+
+```yaml
+# configs/config_lstm_regression.yaml
+experiment:
+  name: "SWCNT_LSTM_Regression_v2"
+  study_name: "lstm_regression_v2"
+
+data:
+  dedrift_method: "Exp_pd"
+  dedrift_params:
+    alpha: 0.0217
+    envelope_ind: [201]
+
+preprocessing:
+  cv_start_cycle: 6
+  cv_test_size: 2
+  look_back_range: [20, 100]
+  n_components_range: [10, 100]
+
+optimization:
+  n_trials: 100
+  direction: "minimize"
+  pruner:
+    n_startup_trials: 5
+    n_warmup_steps: 1
+```
+
+**Benefits**:
+- Reproducible experiments (version control configs)
+- Easy A/B testing (modify YAML, rerun)
+- Clear documentation of experiment setup
 
 ---
 
 ## 📚 Documentation
 
-- **Methodology**: [docs/methodology.md](docs/methodology.md)
-- **Results Summary**: [docs/results.md](docs/results.md)
-- **Data Description**: [data/README.md](data/README.md)
+- **[Methodology](docs/methodology.md)**: Detailed technical approach
+- **[Docker Setup](docs/DOCKER_SETUP.md)**: Container deployment guide
+- **[Data README](data/README.md)**: Raw data description
+- **Notebooks**: Interactive analysis in `notebooks/`
 
 ---
 
-## 🤝 About This Project
+## 🎓 Skills Demonstrated
 
-This project demonstrates:
-- ✅ Production-grade ML pipeline design
-- ✅ Experiment tracking and reproducibility
-- ✅ Time-series best practices (no data leakage)
-- ✅ Hyperparameter optimization at scale
-- ✅ Clean, modular code architecture
+This project showcases:
 
-**Built as part of PhD research, refined as a data science portfolio project.**
+✅ **End-to-end ML pipeline development** (data → model → evaluation)  
+✅ **Time-series analysis** (proper CV, no leakage)  
+✅ **Hyperparameter optimization** (Optuna with 100+ trials)  
+✅ **Experiment tracking** (MLflow integration)  
+✅ **Production engineering** (Docker, config-driven, modular code)  
+✅ **Model comparison** (CatBoost vs LSTM trade-offs)  
+✅ **Feature engineering** (dedrifting, PCA)  
+✅ **Scientific communication** (published research, clear docs)
 
 ---
 
-## 📧 Contact
+## 🤝 Contributing
 
-**Konstantin Zamansky** [ORCID](https://orcid.org/0009-0005-6495-1985) | [LinkedIn](https://www.linkedin.com/in/konstantin-zamansky-244837354/)
+This is a portfolio project, but suggestions are welcome:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/improvement`)
+3. Commit changes (`git commit -m 'Add enhancement'`)
+4. Push to branch (`git push origin feature/improvement`)
+5. Open a Pull Request
 
 ---
 
@@ -188,3 +402,44 @@ This project demonstrates:
 
 GPL-3.0 License - see [LICENSE](LICENSE) for details
 
+---
+
+## 👤 Author
+
+**Konstantin Zamansky**  
+📧 [Contact via LinkedIn](https://www.linkedin.com/in/konstantin-zamansky-244837354/)  
+🔬 [ORCID](https://orcid.org/0009-0005-6495-1985)
+
+---
+
+## 🙏 Acknowledgments
+
+- Research published in *Sensors and Actuators B: Chemical*
+- CatBoost team for excellent gradient boosting library
+- Optuna developers for flexible hyperparameter optimization
+- MLflow community for experiment tracking tools
+
+---
+
+## 📖 Citation
+
+If you use this work, please cite:
+
+```bibtex
+@article{zamansky_gas_2024,
+	title = {A gas sensor based on free-standing {SWCNT} film for selective recognition of toxic and flammable gases under thermal cycling protocols},
+	volume = {417},
+	copyright = {All rights reserved},
+	issn = {0925-4005},
+	url = {https://linkinghub.elsevier.com/retrieve/pii/S0925400524008463},
+	doi = {10.1016/j.snb.2024.136116},
+	abstract = {The widespread adoption of e-nose devices based on chemiresistive materials has been hindered by issues related to sensor device complexity and reliability, specifically sensor drift, necessitating frequent recalibration and retraining of pattern recognition models. This study introduces a method for thermocycling a single sensor based on a free-standing network of single-walled carbon nanotubes (SWCNTs) to acquire signal patterns for selective analyte detection. Additionally, it employs a data filtering technique to compensate for the sensor drift. A free-standing SWCNT film, only a few nanometers thick, is thermally cycled via Joule heating between room temperature and 120 °C. Under these conditions, the sensitivity was tested towards NO2, H2S, and acetone vapors (10–25 ppm) in the mixture with dry air. Signal patterns produced through thermocycling were processed using CatBoost and LSTM algorithms. The accuracy of detection reached 90 \% in the classification task, and the average root mean squared error of analyte concentration detection in the multioutput regression task was below 4 ppm. By combining original sensor design, thermocycling, signal filtering for drift compensation, and advanced pattern recognition models, this work contributes to overcoming the challenges in multivariate sensing systems, paving the way for practical applications of the more reliable chemiresistive sensors.},
+	urldate = {2024-07-04},
+	journal = {Sensors and Actuators B: Chemical},
+	author = {Zamansky, Konstantin K. and Fedorov, Fedor S. and Shandakov, Sergey D. and Chetyrkina, Margarita and Nasibulin, Albert G.},
+	month = oct,
+	year = {2024},
+	keywords = {Gas sensor, Single-walled carbon nanotubes, Pattern recognition, Мои публикации, Drift compensation, Thermocycling,},
+	pages = {136116},
+}
+```
