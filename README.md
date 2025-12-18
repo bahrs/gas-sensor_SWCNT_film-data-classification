@@ -77,16 +77,13 @@ This project demonstrates end-to-end machine learning pipeline development for a
 git clone https://github.com/bahrs/gas-sensor_SWCNT_film-data-classification.git
 cd gas-sensor_SWCNT_film-data-classification
 python -m venv .venv
-```
+
 # Linux/macOS:
-```bash
 source .venv/bin/activate
-```
+
 # Windows (PowerShell):
-```bash
 .venv\Scripts\Activate.ps1
-```
-```bash
+
 pip install .
 ```
 ### Basic Usage
