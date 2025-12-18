@@ -3,6 +3,7 @@
 mlruns/
 catboost_info/
 *.db
+results/
 
 Launch MLflow.bat  # launcher for MLflow from the YD working dir
 

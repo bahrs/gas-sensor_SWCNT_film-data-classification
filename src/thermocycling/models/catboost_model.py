@@ -70,8 +70,8 @@ def train_catboost_classifier(
     y_val: np.ndarray,
     early_stopping_rounds: int = 50,
     verbose: bool = False,
-    trial: Optional[Trial] = None,  # ← ADD THIS
-    fold_idx: Optional[int] = None  # ← ADD THIS
+    trial: Optional[Trial] = None,  
+    fold_idx: Optional[int] = None  
 ) -> Dict[str, Any]:
     """
     Train CatBoost classifier with optional Optuna pruning.
@@ -88,7 +88,7 @@ def train_catboost_classifier(
         # CatBoost pruning callback
         pruning_callback = CatBoostPruningCallback(
             trial,
-            metric='TotalF1:use_weights=false'  # Match your eval_metric
+            metric='TotalF1:use_weights'
         )
         callbacks.append(pruning_callback)
     
@@ -100,7 +100,7 @@ def train_catboost_classifier(
             early_stopping_rounds=early_stopping_rounds,
             verbose=verbose,
             plot=False,
-            callbacks=callbacks  # ← ADD THIS
+            callbacks=callbacks  
         )
         
         # Get best iteration
@@ -113,7 +113,7 @@ def train_catboost_classifier(
             'best_iteration': best_iteration,
             'val_f1_macro': f1_score(y_val, y_pred, average='macro'),
             'val_accuracy': accuracy_score(y_val, y_pred),
-            'pruned': False  # ← ADD THIS
+            'pruned': False  
         }
         
         # Per-class F1 scores
@@ -184,8 +184,8 @@ def train_catboost_regressor(
     y_val: np.ndarray,
     early_stopping_rounds: int = 50,
     verbose: bool = False,
-    trial: Optional[Trial] = None,  # ← ADD THIS
-    fold_idx: Optional[int] = None  # ← ADD THIS
+    trial: Optional[Trial] = None,  
+    fold_idx: Optional[int] = None  
 ) -> Dict[str, Any]:
     """
     Train CatBoost regressor with optional Optuna pruning.
@@ -208,7 +208,7 @@ def train_catboost_regressor(
             early_stopping_rounds=early_stopping_rounds,
             verbose=verbose,
             plot=False,
-            callbacks=callbacks  # ← ADD THIS
+            callbacks=callbacks  
         )
         
         best_iteration = model.get_best_iteration()
@@ -237,7 +237,7 @@ def train_catboost_regressor(
             'val_rmse_no2': float(rmse_per_output[0]),
             'val_rmse_h2s': float(rmse_per_output[1]),
             'val_rmse_acet': float(rmse_per_output[2]),
-            'pruned': False  # ← ADD THIS
+            'pruned': False  
         }
         
         return metrics

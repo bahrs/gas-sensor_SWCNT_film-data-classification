@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "thermocycling"
+version = "0.1.0"
+description = "ML pipeline for SWCNT gas sensor pattern recognition"
+readme = "README.md"
+requires-python = ">=3.13"
+license = {text = "GPL-3.0"}
+authors = [
+    {name = "Konstantin Zamansky", email = "konstantin.zamansky@skoltech.ru"}
+]
+dependencies = [
+    "pandas>=2.3.3",
+    "numpy>=2.3.5",
+    "scikit-learn>=1.7.2",
+    "scipy>=1.16.3",
+    "catboost>=1.2.8",
+    "tensorflow>=2.20.0",
+    "optuna>=4.6.0",
+    "mlflow>=3.6.0",
+    "typer>=0.9.0",
+    "pyyaml>=6.0.3",
+    "pydantic>=2.12.5",
+    "joblib>=1.5.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.0.2",
+    "black>=23.0.0",
+    "mypy>=1.0.0",
+    "flake8>=7.0.0",
+]
+
+[project.scripts]
+thermocycling = "thermocycling.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 100
+target-version = ['py313']
+
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
