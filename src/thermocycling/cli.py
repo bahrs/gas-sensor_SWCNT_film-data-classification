@@ -15,7 +15,7 @@ from typing import Optional
 
 from thermocycling.config import RunConfig
 from thermocycling.utils.seed import set_global_seed
-from thermocycling.data.assemble import full_dataset
+from thermocycling.pipeline.assemble import full_dataset
 from thermocycling.preprocessing.smoothing import Exp_pd, Savitzky_Golay
 from thermocycling.models.optuna_objectives import (
     run_lstm_regressor_optimization,

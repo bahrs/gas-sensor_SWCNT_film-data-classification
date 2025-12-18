@@ -13,9 +13,9 @@ def test_imports():
     
     try:
         import tensorflow as tf
-        from thermocycling.data.loading import load_gas_data  # pyright: ignore[reportMissingImports]
-        from thermocycling.data.cleaning import apply_manual_trim  # pyright: ignore[reportMissingImports]
-        from thermocycling.data.assemble import build_basic_dataset, full_dataset  # pyright: ignore[reportMissingImports]
+        from thermocycling.pipeline.loading import load_gas_data  # pyright: ignore[reportMissingImports]
+        from thermocycling.pipeline.cleaning import apply_manual_trim  # pyright: ignore[reportMissingImports]
+        from thermocycling.pipeline.assemble import build_basic_dataset, full_dataset  # pyright: ignore[reportMissingImports]
         from thermocycling.preprocessing.smoothing import Exp_pd, Savitzky_Golay, dedrift  # pyright: ignore[reportMissingImports]
         from thermocycling.preprocessing.train_test import create_time_series_folds  # pyright: ignore[reportMissingImports]
         from thermocycling.models.catboost_model import build_catboost_classifier, build_catboost_regressor  # pyright: ignore[reportMissingImports]
@@ -36,7 +36,7 @@ def test_data_loading():
     print("\nTesting data loading...")
     
     try:
-        from thermocycling.data.assemble import full_dataset  # pyright: ignore[reportMissingImports]
+        from thermocycling.pipeline.assemble import full_dataset  # pyright: ignore[reportMissingImports]
         from thermocycling.preprocessing.smoothing import Exp_pd  # pyright: ignore[reportMissingImports]
         
         df = full_dataset(
@@ -64,7 +64,7 @@ def test_cv_splitting():
     print("\nTesting CV splitting...")
     
     try:
-        from thermocycling.data.assemble import full_dataset  # pyright: ignore[reportMissingImports]
+        from thermocycling.pipeline.assemble import full_dataset  # pyright: ignore[reportMissingImports]
         from thermocycling.preprocessing.smoothing import Exp_pd  # pyright: ignore[reportMissingImports]
         from thermocycling.preprocessing.train_test import create_time_series_folds  # pyright: ignore[reportMissingImports]
         

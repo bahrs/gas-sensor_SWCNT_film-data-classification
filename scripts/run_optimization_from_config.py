@@ -17,7 +17,7 @@ import yaml
 
 from thermocycling.config import RunConfig  # pyright: ignore[reportMissingImports]
 from thermocycling.utils.seed import set_global_seed  # pyright: ignore[reportMissingImports]
-from thermocycling.data.assemble import full_dataset  # pyright: ignore[reportMissingImports]
+from thermocycling.pipeline.assemble import full_dataset  # pyright: ignore[reportMissingImports]
 from thermocycling.preprocessing.smoothing import Exp_pd, Savitzky_Golay  # pyright: ignore[reportMissingImports]
 from thermocycling.models.optuna_objectives import (  # pyright: ignore[reportMissingImports]
     run_lstm_regressor_optimization,
