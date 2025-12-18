@@ -17,8 +17,8 @@ data:
 preprocessing:
   cv_start_cycle: 6
   cv_test_size: 2
-  #look_back_range: [20, 120]
-  #n_components_range: [10, 160]
+  look_back_range: [20, 120]
+  n_components_range: [10, 160]
 
 model:
   # LSTM-specific (only if model_type: lstm)

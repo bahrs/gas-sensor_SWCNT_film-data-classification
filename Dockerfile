@@ -37,4 +37,4 @@ EXPOSE 5050
 ENTRYPOINT ["/entrypoint.sh"]
 
 # Default command (override in `docker run ... <cmd>`)
-CMD ["python", "scripts/run_optimization_from_config.py", "configs/config_catboost_regression.yaml"]
+CMD ["thermocycling", "optimize", "configs/config_lstm_regression.yaml"]

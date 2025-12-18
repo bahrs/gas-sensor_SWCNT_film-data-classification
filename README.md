@@ -70,33 +70,35 @@ This project demonstrates end-to-end machine learning pipeline development for a
 - 4GB+ RAM
 - (Optional) Docker for containerized execution
 
-### Installation
+## Installation
 
+### Option A — Use as a library (recommended)
 ```bash
-# Clone repository
-git clone https://github.com/yourusername/gas-sensor-ml
-cd gas-sensor-ml
-
-# Create virtual environment
+git clone https://github.com/bahrs/gas-sensor_SWCNT_film-data-classification.git
+cd gas-sensor_SWCNT_film-data-classification
 python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
 ```
-
+# Linux/macOS:
+```bash
+source .venv/bin/activate
+```
+# Windows (PowerShell):
+```bash
+.venv\Scripts\Activate.ps1
+```
+```bash
+pip install .
+```
 ### Basic Usage
 
 ```bash
 # 1. Run hyperparameter optimization (CatBoost regression example)
-python scripts/run_optimization_from_config.py configs/config_catboost_regression.yaml
+thermocycling optimize configs/config_lstm_regression.yaml
 
 # 2. Launch MLflow UI to view results
 mlflow ui --backend-store-uri sqlite:///mlflow.db
 # Open http://localhost:5000
 
-# 3. Access Optuna study database
-python -c "import optuna; study = optuna.load_study(study_name='catboost_regression_v1', storage='sqlite:///optuna_studies.db'); print(study.best_params)"
 ```
 
 ### Docker Deployment
