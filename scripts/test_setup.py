@@ -7,27 +7,20 @@ Usage:
     python scripts/test_setup.py
 """
 
-import sys
-from pathlib import Path
-
-# Add src to path
-PROJECT_ROOT = Path.cwd().parents[0]
-sys.path.append(str(PROJECT_ROOT))
-
 def test_imports():
     """Test that all modules can be imported."""
     print("Testing imports...")
     
     try:
         import tensorflow as tf
-        from src.data.loading import load_gas_data
-        from src.data.cleaning import apply_manual_trim
-        from src.data.assemble import build_basic_dataset, full_dataset
-        from src.preprocessing.smoothing import Exp_pd, Savitzky_Golay, dedrift
-        from src.preprocessing.train_test import create_time_series_folds
-        from src.models.catboost_model import build_catboost_classifier, build_catboost_regressor
-        from src.models.lstm_model import build_lstm
-        from src.models.optuna_objectives import (
+        from thermocycling.data.loading import load_gas_data  # pyright: ignore[reportMissingImports]
+        from thermocycling.data.cleaning import apply_manual_trim  # pyright: ignore[reportMissingImports]
+        from thermocycling.data.assemble import build_basic_dataset, full_dataset  # pyright: ignore[reportMissingImports]
+        from thermocycling.preprocessing.smoothing import Exp_pd, Savitzky_Golay, dedrift  # pyright: ignore[reportMissingImports]
+        from thermocycling.preprocessing.train_test import create_time_series_folds  # pyright: ignore[reportMissingImports]
+        from thermocycling.models.catboost_model import build_catboost_classifier, build_catboost_regressor  # pyright: ignore[reportMissingImports]
+        from thermocycling.models.lstm_model import build_lstm  # pyright: ignore[reportMissingImports]
+        from thermocycling.models.optuna_objectives import (  # pyright: ignore[reportMissingImports]
             LSTMRegressorObjective,
             CatBoostClassifierObjective
         )
@@ -43,8 +36,8 @@ def test_data_loading():
     print("\nTesting data loading...")
     
     try:
-        from src.data.assemble import full_dataset
-        from src.preprocessing.smoothing import Exp_pd
+        from thermocycling.data.assemble import full_dataset  # pyright: ignore[reportMissingImports]
+        from thermocycling.preprocessing.smoothing import Exp_pd  # pyright: ignore[reportMissingImports]
         
         df = full_dataset(
             dedrifting_func=Exp_pd,
@@ -71,9 +64,9 @@ def test_cv_splitting():
     print("\nTesting CV splitting...")
     
     try:
-        from src.data.assemble import full_dataset
-        from src.preprocessing.smoothing import Exp_pd
-        from src.preprocessing.train_test import create_time_series_folds
+        from thermocycling.data.assemble import full_dataset  # pyright: ignore[reportMissingImports]
+        from thermocycling.preprocessing.smoothing import Exp_pd  # pyright: ignore[reportMissingImports]
+        from thermocycling.preprocessing.train_test import create_time_series_folds  # pyright: ignore[reportMissingImports]
         
         df = full_dataset(
             dedrifting_func=Exp_pd,
@@ -115,8 +108,8 @@ def test_model_building():
     print("\nTesting model building...")
     
     try:
-        from src.models.catboost_model import build_catboost_regressor
-        from src.models.lstm_model import build_lstm
+        from thermocycling.models.catboost_model import build_catboost_regressor  # pyright: ignore[reportMissingImports]
+        from thermocycling.models.lstm_model import build_lstm  # pyright: ignore[reportMissingImports]
         
         # Test CatBoost
         catboost_model = build_catboost_regressor(iterations=10, verbose=False)
@@ -150,6 +143,8 @@ def test_config_loading():
             'configs/catboost_classification.yaml',
             'configs/catboost_regression.yaml'
         ]
+        from pathlib import Path
+        PROJECT_ROOT = Path.cwd().parents[0]
         
         for config_file in config_files:
             config_path = PROJECT_ROOT / config_file
@@ -211,4 +206,5 @@ def main():
 
 
 if __name__ == '__main__':
+    import sys
     sys.exit(main())

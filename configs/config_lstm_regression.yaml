@@ -17,8 +17,8 @@ data:
 preprocessing:
   cv_start_cycle: 6
   cv_test_size: 2
-  look_back_range: [20, 100]
-  n_components_range: [10, 100]
+  look_back_range: [20, 120]
+  n_components_range: [10, 160]
 
 model:
   n_layers_range: [1, 3]
@@ -28,17 +28,17 @@ model:
   learning_rate_range: [5.0e-5, 1.0e-1]
   batch_size_options: [32, 64, 128, 256]
   epochs: 100
-  patience: 20
+  patience: 30
 
 optimization:
-  n_trials: 100
+  n_trials: 1000
   timeout: null  # seconds, null = no timeout
   direction: "minimize"  # minimize RMSE
   pruner:
     type: "MedianPruner"
-    n_startup_trials: 5  # Reduced for 1-2 CV folds
+    n_startup_trials: 20  # Reduced for 1-2 CV folds
     n_warmup_steps: 1     # Check after 1st fold
-    interval_steps: 1     # Check every epoch/fold
+    interval_steps: 5     # Check every 5 epoch/fold
 
 storage:
   optuna: "sqlite:///optuna_studies.db"  # Persistent Optuna storage

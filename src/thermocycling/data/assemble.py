@@ -5,7 +5,7 @@ from typing import Callable, Any, List
 from .loading import load_gas_data
 from .cleaning import apply_manual_trim
 from .paths import PROCESSED_FILE_MAP
-from preprocessing.smoothing import dedrift
+from thermocycling.preprocessing.smoothing import dedrift
 
 DP_PER_PULSE = 402  # from experimental protocol (see the article)
 MAX_FLOW = 50  # max flow through MFC, sccm (see the article)
