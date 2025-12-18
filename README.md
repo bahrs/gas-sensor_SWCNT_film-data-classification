@@ -120,8 +120,8 @@ docker run -v $(pwd)/data:/app/data \
 
 ```
 gas-sensor-ml/
-├── src/                          # Core library code
-│   ├── data/                     # Data loading & assembly
+├── src/thermocycling             # Core library code
+│   ├── pipeline/                     # Data loading & assembly
 │   │   ├── loading.py           # Load raw Parquet files
 │   │   ├── cleaning.py          # Apply manual data trimming
 │   │   ├── assemble.py          # Build full dataset with dedrifting
