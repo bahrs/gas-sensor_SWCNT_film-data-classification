@@ -51,12 +51,12 @@ This project demonstrates end-to-end machine learning pipeline development for a
 | **CatBoost** | Concentration Regression | RMSE | **4.2 ppm** |
 | **LSTM** | Multi-output Regression | RMSE | **2.2 ppm** |
 
-*Validated via 8-fold time-series cross-validation with expanding window*
+*Validated via 5-fold time-series cross-validation with expanding window*
 
 ### Model Performance Highlights
 
 - **Classification**: 91% F1-score distinguishing 4 classes (3 gases + air)
-- **Regression**: Sub-5 ppm error on concentration prediction (10-25 ppm range)
+- **Regression**: Sub-3 ppm error on concentration prediction (10-25 ppm range)
 - **Stability**: Low variance across CV folds indicating robust generalization
 - **Efficiency**: CatBoost trains in <2 min; LSTM in <10 min per fold
 
@@ -72,7 +72,7 @@ This project demonstrates end-to-end machine learning pipeline development for a
 
 ## Installation
 
-### Option A — Use as a library (recommended)
+### Use as a library (recommended)
 ```bash
 git clone https://github.com/bahrs/gas-sensor_SWCNT_film-data-classification.git
 cd gas-sensor_SWCNT_film-data-classification
@@ -119,37 +119,39 @@ docker run -v $(pwd)/data:/app/data \
 
 ```
 gas-sensor-ml/
-├── src/thermocycling             # Core library code
-│   ├── pipeline/                     # Data loading & assembly
-│   │   ├── loading.py           # Load raw Parquet files
-│   │   ├── cleaning.py          # Apply manual data trimming
-│   │   ├── assemble.py          # Build full dataset with dedrifting
-│   │   └── paths.py             # Centralized file paths
-│   ├── preprocessing/            # Feature engineering
-│   │   ├── smoothing.py         # Dedrifting algorithms (Exp, Savitzky-Golay)
-│   │   └── train_test.py        # Time-series CV splitting + PCA
-│   └── models/                   # Model definitions
-│       ├── catboost_model.py    # CatBoost classifier/regressor
-│       ├── lstm_model.py        # LSTM architecture
-│       └── optuna_objectives.py # Optimization objectives + MLflow
-├── configs/                      # YAML experiment configs
+├── src/thermocycling           # Core library code
+│   ├── pipeline/                # Data loading & assembly
+│   │   ├── loading.py            # Load raw Parquet files
+│   │   ├── cleaning.py           # Apply manual data trimming
+│   │   ├── assemble.py           # Build full dataset with dedrifting
+│   │   └── paths.py              # Centralized file paths
+│   ├── preprocessing/           # Feature engineering
+│   │   ├── smoothing.py          # Dedrifting algorithms (Exp, Savitzky-Golay)
+│   │   └── train_test.py         # Time-series CV splitting + PCA
+│   └── models/                  # Model definitions
+│       ├── catboost_model.py     # CatBoost classifier/regressor
+│       ├── lstm_model.py         # LSTM architecture
+│       └── optuna_objectives.py  # Optimization objectives + MLflow
+├── configs/                    # YAML experiment configs
 │   ├── config_lstm_regression.yaml
 │   ├── config_catboost_classification.yaml
 │   └── config_catboost_regression.yaml
-├── scripts/                      # Executable scripts
+├── scripts/                    # Executable scripts
 │   └── run_optimization_from_config.py  # Main training script
-├── notebooks/                    # Jupyter analysis notebooks
-│   ├── Test_notebook.ipynb      # Setup validation
-│   └── Optuna_tuning.ipynb      # Hyperparameter analysis
-├── data/                         # Data directory (git-ignored)
-│   ├── raw/                     # Original .brotli sensor files
-│   └── processed/               # .parquet preprocessed data
-├── docs/                         # Documentation
-│   ├── methodology.md           # Technical methodology
-│   └── DOCKER_SETUP.md          # Docker instructions
-├── Dockerfile                    # Container definition
-├── requirements.txt              # Python dependencies
-└── README.md                     # This file
+├── notebooks/                   # Jupyter analysis notebooks
+│   ├── Test_notebook.ipynb       # Setup validation
+│   └── Optuna_tuning.ipynb       # Hyperparameter analysis (work in progress)
+├── data/                        # Data directory (git-ignored)
+│   ├── raw/                      # Original .brotli sensor files
+│   ├── processed/                # .parquet preprocessed data
+│   └── README.md                 # Description of data acquisition and data table structure
+├── docs/                        # Documentation
+│   ├── methodology.md            # Technical methodology  (work in progress)
+│   └── DOCKER_SETUP.md           # Docker instructions  (work in progress)
+├── Dockerfile                   # Container definition
+├── requirements.txt             # Python dependencies
+├── requirements.in              # hand-picked list of core Python dependencies
+└── README.md                    # This file
 ```
 
 ---
@@ -178,18 +180,21 @@ Evaluation & MLflow Logging
 
 **1. Time-Series Cross-Validation**
 - **Problem**: Standard k-fold CV causes data leakage with temporal data
-- **Solution**: Expanding window split by measurement cycle
-  - Fold 1: Train on cycles 1-7 → Test on cycle 8
-  - Fold 2: Train on cycles 1-8 → Test on cycle 9
+- **Solution**: Expanding window split by measurement cycle (=120 temperature cycles)
+  - Fold 1: Train on cycles 1-6 → Test on cycle 7
+  - Fold 2: Train on cycles 1-7 → Test on cycle 8
   - Ensures no future information leaks into training
 
 **2. Dedrifting Preprocessing**
-- **Problem**: Sensor baseline shifts over time
-- **Solution**: Extract voltage envelope at cycle position 201, apply smoothing, subtract from raw signal
-- **Options**: Exponential smoothing (α=0.0217) or Savitzky-Golay filter
+- **Problem**: Sensor baseline exhibits slow drift over time.
+- **Approach**: Extract the voltage envelope at temperature cycle index 201 of 402, corresponding to the maximum voltage within each cycle. Apply exponential smoothing or Savitzky–Golay filtering to this envelope to isolate low-frequency baseline drift, which manifests on a multi-hour timescale.
+- **Correction**: For each cycle, subtract the corresponding value of the smoothed envelope to remove the drift-induced baseline offset.
+- **Filtering options**:
+  - Exponential smoothing with smoothing factor α = 0.0217
+  - Savitzky–Golay filtering with a window width of 285 thermal cycles
 
 **3. Dimensionality Reduction**
-- **Problem**: 402 features per cycle → overfitting risk
+- **Problem**: 402 highly correlated features per temperature cycle → high computational costs + overfitting risk
 - **Solution**: PCA tuned via Optuna (optimal: 20-150 components)
 - **Benefit**: Reduces train time, improves generalization
 
@@ -205,8 +210,8 @@ Evaluation & MLflow Logging
 - **Pruner**: MedianPruner with warmup (prunes poor trials early)
 - **Search Space**:
   - CatBoost: iterations, depth, learning rate, L2 regularization
-  - LSTM: layers, units, dropout, batch size, sequence length
-  - Both: PCA components (10-200)
+  - LSTM: layers, units, learning_rate, dropout, batch size, sequence length
+  - Both: PCA components
 
 **MLflow Integration**:
 - Nested runs: Parent study + child trials
@@ -285,8 +290,8 @@ mlflow experiments list --tracking-uri sqlite:///mlflow.db
 - Hyperparameters (learning rate, depth, dropout, etc.)
 - Metrics per fold (RMSE, F1-score, accuracy)
 - Aggregated metrics (mean, std, CV stability)
-- Model artifacts (CatBoost .cbm, Keras .h5)
-- Training curves (loss, validation loss)
+- Model artifacts (CatBoost .cbm, Keras .h5) (work in progress)
+- Training curves (loss, validation loss) (work in progress)
 
 **Optuna Study Database**:
 ```python
@@ -305,8 +310,8 @@ print(f"Best params: {study.best_params}")
 
 ### Time-Series Cross-Validation
 
-- **Folds**: 8 (expanding window)
-- **Train size**: Increases from 6 → 10 cycles
+- **Folds**: 5 (expanding window)
+- **Train size**: Increases from 5 → 9 cycles
 - **Test size**: 1 cycle per fold
 - **Shuffle**: False (preserves temporal order)
 
@@ -363,8 +368,8 @@ optimization:
 
 ## 📚 Documentation
 
-- **[Methodology](docs/methodology.md)**: Detailed technical approach
-- **[Docker Setup](docs/DOCKER_SETUP.md)**: Container deployment guide
+- **[Methodology](docs/methodology.md)**: Detailed technical approach (work in progress)
+- **[Docker Setup](docs/DOCKER_SETUP.md)**: Container deployment guide (work in progress)
 - **[Data README](data/README.md)**: Raw data description
 - **Notebooks**: Interactive analysis in `notebooks/`
 
